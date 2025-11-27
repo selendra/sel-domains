@@ -1,0 +1,116 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* Selendra Brand Colors */
+:root {
+  /* Brand Colors */
+  --selendra-50: #e6faf8;
+  --selendra-100: #b3f0ea;
+  --selendra-200: #80e6dc;
+  --selendra-300: #4ddcce;
+  --selendra-400: #26d4c3;
+  --selendra-500: #0db0a4;
+  --selendra-600: #0a9389;
+  --selendra-700: #087670;
+  --selendra-800: #065a56;
+  --selendra-900: #043d3b;
+  
+  /* shadcn variables */
+  --radius: 0.5rem;
+  --background: 0 0% 100%;
+  --foreground: 222.2 84% 4.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 222.2 84% 4.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222.2 84% 4.9%;
+  --primary: 174 85% 37%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 210 40% 96.1%;
+  --secondary-foreground: 222.2 47.4% 11.2%;
+  --muted: 210 40% 96.1%;
+  --muted-foreground: 215.4 16.3% 46.9%;
+  --accent: 174 85% 95%;
+  --accent-foreground: 174 85% 30%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 214.3 31.8% 91.4%;
+  --input: 214.3 31.8% 91.4%;
+  --ring: 174 85% 37%;
+  --chart-1: 174 85% 37%;
+  --chart-2: 174 85% 50%;
+  --chart-3: 174 85% 60%;
+  --chart-4: 174 85% 70%;
+  --chart-5: 174 85% 80%;
+}
+
+.dark {
+  --background: 222.2 84% 4.9%;
+  --foreground: 210 40% 98%;
+  --card: 222.2 84% 4.9%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222.2 84% 4.9%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 174 85% 45%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 217.2 32.6% 17.5%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 217.2 32.6% 17.5%;
+  --muted-foreground: 215 20.2% 65.1%;
+  --accent: 174 85% 15%;
+  --accent-foreground: 174 85% 70%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 210 40% 98%;
+  --border: 217.2 32.6% 17.5%;
+  --input: 217.2 32.6% 17.5%;
+  --ring: 174 85% 45%;
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  --color-ring: hsl(var(--ring));
+  --color-input: hsl(var(--input));
+  --color-border: hsl(var(--border));
+  --color-destructive: hsl(var(--destructive));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-card: hsl(var(--card));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  
+  /* Selendra brand colors in theme */
+  --color-selendra-50: var(--selendra-50);
+  --color-selendra-100: var(--selendra-100);
+  --color-selendra-200: var(--selendra-200);
+  --color-selendra-300: var(--selendra-300);
+  --color-selendra-400: var(--selendra-400);
+  --color-selendra-500: var(--selendra-500);
+  --color-selendra-600: var(--selendra-600);
+  --color-selendra-700: var(--selendra-700);
+  --color-selendra-800: var(--selendra-800);
+  --color-selendra-900: var(--selendra-900);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased;
+  }
+}
