@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { Button } from "@/components/ui/button";
+import { ConnectWallet } from "@/components/connect-wallet";
 
 export function Header() {
   return (
@@ -22,6 +22,18 @@ export function Header() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
+          <Link
+            href="/lookup"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
+          >
+            Lookup
+          </Link>
+          <Link
+            href="/my-domains"
+            className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
+          >
+            My Domains
+          </Link>
           <Link
             href="#features"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
@@ -49,9 +61,7 @@ export function Header() {
           </Link>
         </nav>
 
-        <Button className="bg-[#0db0a4] hover:bg-[#0a9389]">
-          Connect Wallet
-        </Button>
+        <ConnectWallet />
       </div>
     </header>
   );

@@ -29,7 +29,7 @@ Multi-year discount: 10% for 2+ years
 
 ---
 
-## Phase 2: Web App (In Progress)
+## Phase 2: Web App ✅
 
 ### Landing Page ✅
 
@@ -38,42 +38,43 @@ Multi-year discount: 10% for 2+ years
 - [x] Features overview
 - [x] FAQ section
 
-### Domain Search
+### Domain Search ✅
 
-- [ ] Real-time availability check
-- [ ] Price calculation with year selector
-- [ ] Suggestions for taken names
+- [x] Real-time availability check (contract integration)
+- [x] Price calculation with year selector
+- [x] Mock data fallback when wallet not connected
 
-### Registration Flow
+### Registration Flow ✅
 
-- [ ] Connect wallet (MetaMask, WalletConnect)
-- [ ] Select registration period (1-10 years)
-- [ ] Review price and confirm
-- [ ] Transaction signing
-- [ ] Success confirmation with domain details
+- [x] Connect wallet (RainbowKit + wagmi)
+- [x] Select registration period (1-10 years)
+- [x] Review price and confirm
+- [x] Commit-reveal transaction flow
+- [x] Success confirmation with domain details
 
-### Domain Management
+### Domain Management ✅
 
-- [ ] View owned domains
-- [ ] Set primary address
-- [ ] Renew domains
-- [ ] Transfer ownership
+- [x] View owned domains (/my-domains)
+- [x] Set primary address
+- [x] Renew domains
+- [x] Transfer ownership
+- [x] Edit text records
 
 ---
 
-## Phase 3: Resolution
+## Phase 3: Resolution ✅
 
-### Address Resolution
+### Address Resolution ✅
 
-- [ ] Forward lookup: alice.sel → 0x1234...
-- [ ] Reverse lookup: 0x1234... → alice.sel
-- [ ] Multi-address support (SEL, ETH, BTC)
+- [x] Forward lookup: alice.sel → 0x1234... (/lookup)
+- [x] Reverse lookup: 0x1234... → alice.sel
+- [x] Address display component with identicon
 
-### Records
+### Records ✅
 
-- [ ] Set/update address records
-- [ ] Text records (email, url, description)
-- [ ] Content hash (IPFS/ARWEAVE)
+- [x] Set/update address records
+- [x] Text records (email, url, avatar, twitter, github, etc.)
+- [ ] Content hash (IPFS/ARWEAVE) - deferred to v2
 
 ---
 
@@ -82,7 +83,7 @@ Multi-year discount: 10% for 2+ years
 ### JavaScript SDK
 
 ```typescript
-import { SNS } from "@selendra/sns-sdk";
+import { SNS } from "@selendrajs/sns";
 
 const sns = new SNS({ provider });
 
@@ -168,12 +169,12 @@ const address = await sns.resolve("alice.sel");
 
 ## Timeline
 
-| Phase               | Duration | Status         |
-| ------------------- | -------- | -------------- |
-| Phase 1: Foundation | Complete | ✅             |
-| Phase 2: Web App    | 2 weeks  | 🔄 In Progress |
-| Phase 3: Resolution | 1 week   | ⏳ Planned     |
-| Phase 4: SDK        | 2 weeks  | ⏳ Planned     |
-| Phase 5: Renewals   | 1 week   | ⏳ Planned     |
+| Phase               | Duration | Status     |
+| ------------------- | -------- | ---------- |
+| Phase 1: Foundation | Complete | ✅         |
+| Phase 2: Web App    | 2 weeks  | ✅         |
+| Phase 3: Resolution | 1 week   | ✅         |
+| Phase 4: SDK        | 2 weeks  | ⏳ Planned |
+| Phase 5: Renewals   | 1 week   | ⏳ Planned |
 
 **Target Launch: Q1 2026**

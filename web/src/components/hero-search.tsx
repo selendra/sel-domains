@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAccount, useConnect } from "wagmi";
+import { formatEther } from "viem";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -11,13 +13,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useCheckAvailability, useGetPrice } from "@/hooks/use-sns";
+import { Loader2 } from "lucide-react";
 
-// Pricing based on name length (per year)
-function getBasePrice(name: string): number {
+// Mock pricing based on name length (per year) - used when wallet not connected
+function getMockBasePrice(name: string): number {
   const len = name.length;
-  if (len === 3) return 500;
-  if (len === 4) return 100;
-  return 5;
+  if (len === 3) return 1000; // Updated: 1,000 SEL/year
+  if (len === 4) return 250;  // Updated: 250 SEL/year
+  return 50;                  // Updated: 50 SEL/year for 5+ chars
 }
 
 const yearOptions = [
@@ -41,8 +45,22 @@ function calculatePrice(
   return Math.round(basePrice * years * (1 - discount));
 }
 
-// Mock availability check
-function checkAvailability(name: string): boolean {
+// Format price from BigInt (wei) to display string
+function formatPrice(price: bigint): string {
+  const formatted = formatEther(price);
+  const num = parseFloat(formatted);
+  // Format with appropriate decimal places
+  if (num >= 1000) {
+    return num.toLocaleString(undefined, { maximumFractionDigits: 0 });
+  } else if (num >= 1) {
+    return num.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  } else {
+    return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
+  }
+}
+
+// Mock availability check - used when wallet not connected
+function mockCheckAvailability(name: string): boolean {
   const takenNames = ["selendra", "bitriel", "cambodia", "admin", "root"];
   return !takenNames.includes(name.toLowerCase());
 }
@@ -70,17 +88,64 @@ function isValidName(name: string): { valid: boolean; error?: string } {
 interface SearchResult {
   name: string;
   available: boolean;
-  basePrice: number;
+  basePrice: number; // For mock display when not connected
+  isFromContract: boolean;
 }
 
 export function HeroSearch() {
+  const { address, isConnected } = useAccount();
+  const { connectors, connect } = useConnect();
+  
   const [searchValue, setSearchValue] = useState("");
+  const [searchedName, setSearchedName] = useState(""); // Name being looked up
   const [result, setResult] = useState<SearchResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [selectedYears, setSelectedYears] = useState<number>(1);
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Contract hooks - only active when we have a searched name and wallet connected
+  const {
+    available: contractAvailable,
+    isLoading: isAvailabilityLoading,
+    error: availabilityError,
+  } = useCheckAvailability(searchedName);
+
+  const {
+    total: contractPrice,
+    isLoading: isPriceLoading,
+    error: priceError,
+  } = useGetPrice(searchedName, selectedYears);
 
   const selectedOption = yearOptions.find((opt) => opt.years === selectedYears);
   const discount = selectedOption?.discount || 0;
+
+  // Update result when contract data changes (for connected wallet)
+  useEffect(() => {
+    if (searchedName && isConnected && !isAvailabilityLoading && !availabilityError) {
+      setResult({
+        name: searchedName,
+        available: contractAvailable,
+        basePrice: getMockBasePrice(searchedName), // Fallback for UI
+        isFromContract: true,
+      });
+      setIsSearching(false);
+    }
+  }, [searchedName, isConnected, contractAvailable, isAvailabilityLoading, availabilityError]);
+
+  // Handle contract errors
+  useEffect(() => {
+    if (availabilityError && isConnected && searchedName) {
+      setError(`Contract error: ${availabilityError.message}. Using mock data.`);
+      // Fall back to mock data on error
+      setResult({
+        name: searchedName,
+        available: mockCheckAvailability(searchedName),
+        basePrice: getMockBasePrice(searchedName),
+        isFromContract: false,
+      });
+      setIsSearching(false);
+    }
+  }, [availabilityError, isConnected, searchedName]);
 
   const handleSearch = () => {
     const name = searchValue.trim().toLowerCase();
@@ -90,15 +155,25 @@ export function HeroSearch() {
     if (!validation.valid) {
       setError(validation.error || "Invalid name");
       setResult(null);
+      setSearchedName("");
       return;
     }
 
     setError(null);
-    setResult({
-      name: name,
-      available: checkAvailability(name),
-      basePrice: getBasePrice(name),
-    });
+    setSearchedName(name);
+
+    if (isConnected) {
+      // Use contract calls - result will be set via useEffect
+      setIsSearching(true);
+    } else {
+      // Use mock data when not connected
+      setResult({
+        name: name,
+        available: mockCheckAvailability(name),
+        basePrice: getMockBasePrice(name),
+        isFromContract: false,
+      });
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -106,6 +181,45 @@ export function HeroSearch() {
       handleSearch();
     }
   };
+
+  const handleRegister = () => {
+    if (!isConnected) {
+      // Prompt to connect wallet
+      const connector = connectors[0];
+      if (connector) {
+        connect({ connector });
+      }
+      return;
+    }
+    
+    // Navigate to registration page
+    if (result?.name) {
+      window.location.href = `/register?name=${encodeURIComponent(result.name)}&years=${selectedYears}`;
+    }
+  };
+
+  // Calculate display price
+  const getDisplayPrice = (): string => {
+    if (isConnected && result?.isFromContract && contractPrice > BigInt(0)) {
+      return formatPrice(contractPrice);
+    }
+    // Mock calculation with discounts
+    if (result) {
+      return calculatePrice(result.basePrice, selectedYears, discount).toLocaleString();
+    }
+    return "0";
+  };
+
+  const getBasePriceDisplay = (): string => {
+    if (isConnected && result?.isFromContract && contractPrice > BigInt(0)) {
+      // For base price, divide by years
+      const basePerYear = contractPrice / BigInt(selectedYears);
+      return formatPrice(basePerYear);
+    }
+    return result?.basePrice.toString() || "0";
+  };
+
+  const isLoading = isSearching || (isConnected && (isAvailabilityLoading || isPriceLoading));
 
   return (
     <section className="bg-gradient-to-b from-[#e6faf8] to-white px-4 pb-16 pt-32">
@@ -135,14 +249,24 @@ export function HeroSearch() {
             </div>
             <Button
               onClick={handleSearch}
-              className="rounded-none bg-[#0db0a4] px-8 py-6 text-base font-semibold hover:bg-[#0a9389]"
+              disabled={isLoading}
+              className="rounded-none bg-[#0db0a4] px-8 py-6 text-base font-semibold hover:bg-[#0a9389] disabled:opacity-50"
             >
-              Search
+              {isLoading ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                "Search"
+              )}
             </Button>
           </div>
 
           <p className="mt-4 text-sm text-gray-500">
             Try: alice, bitriel, cambodia, yourname
+            {!isConnected && (
+              <span className="ml-1 text-amber-600">
+                (Connect wallet for live data)
+              </span>
+            )}
           </p>
 
           {/* Error */}
@@ -152,8 +276,16 @@ export function HeroSearch() {
             </div>
           )}
 
+          {/* Loading State */}
+          {isLoading && !result && (
+            <div className="mt-6 flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-gray-50 p-6">
+              <Loader2 className="h-5 w-5 animate-spin text-[#0db0a4]" />
+              <span className="text-gray-600">Checking availability...</span>
+            </div>
+          )}
+
           {/* Result */}
-          {result && (
+          {result && !isLoading && (
             <div
               className={`mt-6 rounded-xl border p-6 text-left ${
                 result.available
@@ -161,8 +293,15 @@ export function HeroSearch() {
                   : "border-red-200 bg-red-50"
               }`}
             >
-              <div className="mb-2 font-mono text-2xl font-bold">
-                {result.name}.sel
+              <div className="mb-2 flex items-center justify-between">
+                <span className="font-mono text-2xl font-bold">
+                  {result.name}.sel
+                </span>
+                {!result.isFromContract && (
+                  <span className="text-xs text-amber-600 bg-amber-50 px-2 py-1 rounded">
+                    Demo data
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2">
                 <span
@@ -220,54 +359,88 @@ export function HeroSearch() {
 
                   {/* Price Summary */}
                   <div className="mt-4 space-y-2 rounded-lg bg-white/50 p-3">
-                    <div className="flex items-center justify-between text-sm">
-                      <span className="text-gray-600">Base price per year</span>
-                      <span className="font-mono text-gray-500">
-                        {result.basePrice} SEL
-                      </span>
-                    </div>
-                    {discount > 0 && (
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="text-green-600">
-                          Discount ({Math.round(discount * 100)}% off)
-                        </span>
-                        <span className="font-mono text-green-600">
-                          -
-                          {(
-                            result.basePrice * selectedYears * discount
-                          ).toLocaleString()}{" "}
-                          SEL
-                        </span>
+                    {isPriceLoading && isConnected ? (
+                      <div className="flex items-center justify-center gap-2 py-2">
+                        <Loader2 className="h-4 w-4 animate-spin text-[#0db0a4]" />
+                        <span className="text-sm text-gray-500">Loading price...</span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between border-t border-gray-200 pt-2">
-                      <span className="font-semibold text-gray-900">
-                        Total ({selectedYears} {selectedYears === 1 ? "year" : "years"})
-                      </span>
-                      <div className="text-right">
-                        <span className="font-mono text-lg font-bold text-[#0a9389]">
-                          {calculatePrice(
-                            result.basePrice,
-                            selectedYears,
-                            discount
-                          ).toLocaleString()}{" "}
-                          SEL
-                        </span>
-                        {discount > 0 && (
-                          <span className="ml-2 text-sm text-gray-400 line-through">
-                            {(
-                              result.basePrice * selectedYears
-                            ).toLocaleString()}
+                    ) : (
+                      <>
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="text-gray-600">Base price per year</span>
+                          <span className="font-mono text-gray-500">
+                            {getBasePriceDisplay()} SEL
                           </span>
+                        </div>
+                        {discount > 0 && !result.isFromContract && (
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="text-green-600">
+                              Discount ({Math.round(discount * 100)}% off)
+                            </span>
+                            <span className="font-mono text-green-600">
+                              -
+                              {(
+                                result.basePrice * selectedYears * discount
+                              ).toLocaleString()}{" "}
+                              SEL
+                            </span>
+                          </div>
                         )}
-                      </div>
-                    </div>
+                        <div className="flex items-center justify-between border-t border-gray-200 pt-2">
+                          <span className="font-semibold text-gray-900">
+                            Total ({selectedYears} {selectedYears === 1 ? "year" : "years"})
+                          </span>
+                          <div className="text-right">
+                            <span className="font-mono text-lg font-bold text-[#0a9389]">
+                              {getDisplayPrice()} SEL
+                            </span>
+                            {discount > 0 && !result.isFromContract && (
+                              <span className="ml-2 text-sm text-gray-400 line-through">
+                                {(
+                                  result.basePrice * selectedYears
+                                ).toLocaleString()}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                        {priceError && (
+                          <div className="text-xs text-amber-600 mt-1">
+                            Could not fetch contract price. Showing estimated price.
+                          </div>
+                        )}
+                      </>
+                    )}
                   </div>
 
-                  <Button className="mt-4 w-full bg-[#0db0a4] py-6 text-base font-semibold hover:bg-[#0a9389]">
-                    Register Now
+                  <Button 
+                    onClick={handleRegister}
+                    disabled={isPriceLoading}
+                    className="mt-4 w-full bg-[#0db0a4] py-6 text-base font-semibold hover:bg-[#0a9389] disabled:opacity-50"
+                  >
+                    {!isConnected ? (
+                      "Connect Wallet to Register"
+                    ) : isPriceLoading ? (
+                      <Loader2 className="h-5 w-5 animate-spin" />
+                    ) : (
+                      "Register Now"
+                    )}
                   </Button>
+
+                  {!isConnected && (
+                    <p className="mt-2 text-xs text-center text-gray-500">
+                      Connect your wallet to register this domain
+                    </p>
+                  )}
                 </>
+              )}
+
+              {/* Show info for taken domains */}
+              {!result.available && (
+                <div className="mt-4 border-t border-gray-200 pt-4">
+                  <p className="text-sm text-gray-600">
+                    This domain is already registered. Try searching for a different name.
+                  </p>
+                </div>
               )}
             </div>
           )}
