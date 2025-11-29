@@ -57,18 +57,18 @@ interface StoredRegistrationState {
 const STORAGE_KEY = "sns_registration_state";
 const WAIT_TIME_SECONDS = MIN_COMMITMENT_AGE; // 60 seconds
 
-// Year discount rates
+// Year discount rates (matches contract: 10% for 2+ years)
 const YEAR_DISCOUNTS: Record<number, number> = {
   1: 0,
   2: 0.1,
-  3: 0.15,
-  4: 0.18,
-  5: 0.2,
-  6: 0.22,
-  7: 0.24,
-  8: 0.26,
-  9: 0.28,
-  10: 0.3,
+  3: 0.1,
+  4: 0.1,
+  5: 0.1,
+  6: 0.1,
+  7: 0.1,
+  8: 0.1,
+  9: 0.1,
+  10: 0.1,
 };
 
 // ============ Utility Functions ============
@@ -129,7 +129,7 @@ function ConnectWalletPrompt() {
   const { connectors, connect } = useConnect();
 
   return (
-    <Card className="mx-auto max-w-lg border-amber-200 bg-amber-50">
+    <Card className="w-full border-amber-200 bg-amber-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-amber-800">
           <AlertCircle className="h-5 w-5" />
@@ -286,6 +286,18 @@ function TransactionStatus({
 
 // ============ Step Components ============
 
+// Get base annual price based on name length (matches contract pricing)
+function getBaseAnnualPrice(name: string): bigint {
+  // Remove .sel suffix if present to get actual name length
+  const cleanName = name.toLowerCase().endsWith('.sel') 
+    ? name.slice(0, -4) 
+    : name;
+  const len = cleanName.length;
+  if (len === 3) return BigInt(1000) * BigInt(10 ** 18); // 1000 SEL
+  if (len === 4) return BigInt(250) * BigInt(10 ** 18);  // 250 SEL  
+  return BigInt(50) * BigInt(10 ** 18);                  // 50 SEL for 5+ chars
+}
+
 function ReviewStep({
   name,
   years,
@@ -301,10 +313,11 @@ function ReviewStep({
 }) {
   const fullName = ensureSuffix(name);
   const discount = YEAR_DISCOUNTS[years] || 0;
-  const basePricePerYear = years > 0 ? price / BigInt(years) : BigInt(0);
+  // Use the base price from name length, not derived from total (which has discount)
+  const basePricePerYear = getBaseAnnualPrice(name);
 
   return (
-    <Card className="mx-auto max-w-lg">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-[#0db0a4]" />
@@ -354,7 +367,7 @@ function ReviewStep({
                     Multi-year Discount ({Math.round(discount * 100)}%)
                   </span>
                   <span className="font-mono text-green-600">
-                    Applied
+                    -{formatPrice((basePricePerYear * BigInt(years) * BigInt(Math.round(discount * 100))) / BigInt(100))} SEL
                   </span>
                 </div>
               )}
@@ -411,7 +424,7 @@ function CommitStep({
   onRetry: () => void;
 }) {
   return (
-    <Card className="mx-auto max-w-lg">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <Badge variant="secondary" className="bg-blue-100 text-blue-700">
@@ -490,7 +503,7 @@ function WaitStep({
   );
 
   return (
-    <Card className="mx-auto max-w-lg">
+    <Card className="w-full">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <Timer className="h-5 w-5 text-[#0db0a4]" />
@@ -597,7 +610,7 @@ function RegisterStep({
   canComplete: boolean;
 }) {
   return (
-    <Card className="mx-auto max-w-lg">
+    <Card className="w-full">
       <CardHeader>
         <div className="flex items-center justify-between">
           <Badge variant="secondary" className="bg-green-100 text-green-700">
@@ -691,7 +704,7 @@ function SuccessStep({
   expiryDate.setFullYear(expiryDate.getFullYear() + years);
 
   return (
-    <Card className="mx-auto max-w-lg border-green-200 bg-gradient-to-b from-green-50 to-white">
+    <Card className="w-full border-green-200 bg-gradient-to-b from-green-50 to-white">
       <CardHeader className="text-center">
         <div className="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full bg-green-100">
           <PartyPopper className="h-10 w-10 text-green-600" />
@@ -783,7 +796,7 @@ function ErrorStep({
   onReset: () => void;
 }) {
   return (
-    <Card className="mx-auto max-w-lg border-red-200 bg-red-50">
+    <Card className="w-full border-red-200 bg-red-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-red-800">
           <AlertCircle className="h-5 w-5" />
@@ -1084,7 +1097,7 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
   // Check if domain is still available
   if (!isCheckingAvailability && !available && derivedFlowStep === "review") {
     return (
-      <Card className="mx-auto max-w-lg border-red-200 bg-red-50">
+      <Card className="w-full border-red-200 bg-red-50">
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-red-800">
             <AlertCircle className="h-5 w-5" />

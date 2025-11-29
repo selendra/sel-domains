@@ -37,27 +37,42 @@ SNS is a decentralized naming system built on Selendra, inspired by ENS (Ethereu
 ## Project Structure
 
 ```
-sns/
-├── contracts/
+sel-domains/
+├── src/                          # Solidity contracts (Foundry)
 │   ├── SNSRegistry.sol           # Core registry (owner/resolver mapping)
-│   ├── PublicResolver.sol        # Multi-record resolver (addr, text, contenthash)
+│   ├── PublicResolver.sol        # Multi-record resolver
 │   ├── BaseRegistrar.sol         # ERC-721 NFT for domain ownership
-│   ├── SELRegistrarController.sol # Commit-reveal registration controller
+│   ├── SELRegistrarController.sol # Commit-reveal registration
 │   ├── ReverseRegistrar.sol      # Address → name reverse resolution
 │   ├── PriceOracle.sol           # Dynamic pricing by name length
 │   ├── interfaces/
 │   │   └── ISNSContracts.sol     # Standard interfaces
 │   └── utils/
-│       └── SNSUtils.sol          # Helper library (namehash, validation)
-├── sdk/
-│   └── index.ts                  # JavaScript/TypeScript SDK
-├── scripts/
-│   └── deploy.ts                 # Deployment script for Selendra
-├── test/
-│   └── sns.test.ts               # Contract tests
-├── hardhat.config.ts             # Hardhat configuration
-├── package.json                  # Dependencies
-└── README.md                     # This file
+│       └── SNSUtils.sol          # Helper library
+├── test/                         # Solidity tests
+│   ├── SNSRegistry.t.sol
+│   ├── BaseRegistrar.t.sol
+│   ├── SELRegistrarController.t.sol
+│   └── PublicResolver.t.sol
+├── script/                       # Deployment scripts (Forge)
+│   └── DeploySNS.s.sol
+├── sdk/                          # Viem-based TypeScript SDK
+│   ├── src/
+│   │   ├── index.ts
+│   │   ├── sns.ts
+│   │   ├── constants.ts
+│   │   ├── utils.ts
+│   │   └── abis/
+│   ├── package.json
+│   └── tsconfig.json
+├── web/                          # Next.js frontend
+├── docs/                         # Documentation
+│   ├── design.md
+│   ├── tech.md
+│   └── tasks.md
+├── foundry.toml                  # Foundry configuration
+├── remappings.txt                # Import remappings
+└── README.md
 ```
 
 ## Core Components
@@ -113,6 +128,7 @@ Maps addresses back to names for display purposes.
 | 5+ characters | 5 SEL              | `alice.sel` |
 
 **Discounts:**
+
 - 10% off for 2+ year registrations
 - Premium names may have additional pricing
 
@@ -140,85 +156,113 @@ User                    Controller              Registry
 
 ## Supported Records
 
-| Record Type | Key Examples | Description |
-|-------------|--------------|-------------|
-| `addr` | `addr(node)` | Primary EVM address |
-| `addr(coinType)` | `addr(node, 1961)` | Multi-chain addresses |
-| `text` | `email`, `url`, `avatar` | Arbitrary text data |
-| `contenthash` | IPFS, Arweave | Decentralized content |
-| `ABI` | Contract ABI | Interface definitions |
+| Record Type      | Key Examples             | Description           |
+| ---------------- | ------------------------ | --------------------- |
+| `addr`           | `addr(node)`             | Primary EVM address   |
+| `addr(coinType)` | `addr(node, 1961)`       | Multi-chain addresses |
+| `text`           | `email`, `url`, `avatar` | Arbitrary text data   |
+| `contenthash`    | IPFS, Arweave            | Decentralized content |
+| `ABI`            | Contract ABI             | Interface definitions |
 
 ## Quick Start
 
-### Installation
+### Prerequisites
 
 ```bash
-cd sns
-npm install
+# Install Foundry
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
+
+# Install dependencies
+forge install
 ```
 
-### Compile Contracts
+### Build Contracts
 
 ```bash
-npm run compile
+forge build
 ```
 
 ### Run Tests
 
 ```bash
-npm run test
+forge test
+forge test -vvv  # verbose output
 ```
 
 ### Deploy to Testnet
 
 ```bash
-# Set up your .env file first
-cp .env.example .env
-# Edit .env with your private key
+# Set up your environment
+export PRIVATE_KEY=0x...
+export RPC_URL=https://rpc-testnet.selendra.org
 
-npm run deploy:testnet
-```
-
-### Deploy to Mainnet
-
-```bash
-npm run deploy:mainnet
+# Deploy (use --legacy for Selendra network)
+forge script script/DeploySNS.s.sol:DeploySNS \
+  --rpc-url $RPC_URL \
+  --broadcast \
+  --private-key $PRIVATE_KEY \
+  --legacy
 ```
 
 ## SDK Usage
 
 ```typescript
-import { SNSClient, namehash, DURATION } from './sdk';
-import { ethers } from 'ethers';
+import { SNS, selendraTestnet } from "@selendra/sns-sdk";
+import { createPublicClient, createWalletClient, http } from "viem";
+import { privateKeyToAccount } from "viem/accounts";
 
-// Connect to Selendra
-const provider = new ethers.JsonRpcProvider('https://rpc.selendra.org');
-const sns = new SNSClient(provider, {
-  registry: '0x...',
-  resolver: '0x...',
-  registrarController: '0x...',
-  reverseRegistrar: '0x...',
+// Create clients
+const publicClient = createPublicClient({
+  chain: selendraTestnet,
+  transport: http(),
 });
 
-// Resolve a name to address
-const address = await sns.resolveName('alice.sel');
-console.log('alice.sel →', address);
+const account = privateKeyToAccount("0x...");
+const walletClient = createWalletClient({
+  account,
+  chain: selendraTestnet,
+  transport: http(),
+});
 
-// Reverse resolve an address
-const name = await sns.lookupAddress('0x742d35Cc...');
-console.log('0x742d35Cc... →', name);
+// Initialize SNS
+const sns = new SNS({
+  publicClient,
+  walletClient,
+  network: "testnet",
+});
 
 // Check availability
-const available = await sns.isAvailable('myname');
-console.log('myname.sel available:', available);
+const available = await sns.isAvailable("alice");
+console.log("alice.sel available:", available);
 
-// Get price for 1 year
-const price = await sns.getPrice('myname', DURATION.ONE_YEAR);
-console.log('Price:', ethers.formatEther(price.total), 'SEL');
+// Get price (1 year)
+const price = await sns.getPrice("alice", 365n * 24n * 60n * 60n);
+console.log("Price:", price.total, "wei");
 
-// Get profile
-const profile = await sns.getProfile('alice.sel');
-console.log('Profile:', profile);
+// Resolve domain
+const address = await sns.getAddress("alice.sel");
+console.log("alice.sel →", address);
+
+// Get domain info
+const info = await sns.getDomainInfo("alice");
+console.log("Domain info:", info);
+
+// Register (with auto commit-reveal)
+const { commitTx, registerTx } = await sns.registerWithCommit(
+  "myname",
+  account.address
+);
+console.log("Commit tx:", commitTx);
+console.log("Register tx:", registerTx);
+```
+
+### Build SDK
+
+```bash
+cd sdk
+npm install
+npm run build
 ```
 
 ## Contract Interfaces
@@ -256,10 +300,10 @@ namehash('') = 0x000000000000000000000000000000000000000000000000000000000000000
 
 ## Network Configuration
 
-| Network | Chain ID | RPC |
-|---------|----------|-----|
-| Mainnet | 1961 | https://rpc.selendra.org |
-| Testnet | 1953 | https://rpc-testnet.selendra.org |
+| Network | Chain ID | RPC                              |
+| ------- | -------- | -------------------------------- |
+| Mainnet | 1961     | https://rpc.selendra.org         |
+| Testnet | 1953     | https://rpc-testnet.selendra.org |
 
 ## Security Considerations
 

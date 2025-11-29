@@ -44,7 +44,7 @@ export default function RegisterPage() {
   return (
     <div className="flex min-h-screen flex-col bg-gradient-to-b from-[#e6faf8] to-white">
       <Header />
-      <main className="flex-1 px-4 py-12">
+      <main className="flex-1 px-4 pt-24 pb-12">
         <Suspense
           fallback={
             <div className="flex min-h-[60vh] items-center justify-center">

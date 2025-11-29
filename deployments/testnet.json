@@ -1,0 +1,26 @@
+{
+  "network": "selendra_testnet",
+  "chainId": 1961,
+  "deployer": "0xeC63B36363C4Dc5c3df20c4e46C261C10C4A3DD9",
+  "timestamp": "2025-01-17",
+  "contracts": {
+    "SNSRegistry": "0x64Ff7c36e879516724dFE312c5D6C704d6bD6be1",
+    "PublicResolver": "0x4d379C8bbee421f6742b078956F2714D701Aa997",
+    "BaseRegistrar": "0x875C6bDc6C315FCFF1429B80D39C0259E5cFcaa3",
+    "PriceOracle": "0xf157c876e1206A2AA22A36EF034986e8B621a851",
+    "SELRegistrarController": "0xD45c5b8df20Bb0be78e85aeaE56606D385770691",
+    "ReverseRegistrar": "0x009439C9b8BFa22f5cbdEb479bAA8e5Fa2041899"
+  },
+  "nodes": {
+    "sel": "0x33615410d033c123aaa1a299d1f0146097076d2c66488aef392b0659c3722ea3",
+    "reverse": "0xa097f6721ce401e757d1223a763fef49b8b5f90bb18567ddb86fd205dff71d34",
+    "addr.reverse": "0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2"
+  },
+  "pricing": {
+    "3_char": "1000 SEL/year",
+    "4_char": "250 SEL/year",
+    "5_plus": "50 SEL/year",
+    "multi_year_discount": "10%"
+  },
+  "explorer": "https://explorer-testnet.selendra.org"
+}

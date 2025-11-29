@@ -8,7 +8,13 @@ import {
   useAccount,
   usePublicClient,
 } from "wagmi";
-import { keccak256, encodePacked, toHex, type Address } from "viem";
+import {
+  keccak256,
+  encodePacked,
+  encodeAbiParameters,
+  toHex,
+  type Address,
+} from "viem";
 import {
   CONTRACT_ADDRESSES,
   SELRegistrarControllerABI,
@@ -183,29 +189,28 @@ export function useRegisterDomain() {
   const calculateCommitment = useCallback(
     (params: RegistrationParams, secretValue: `0x${string}`): `0x${string}` => {
       const nameWithoutSuffix = removeSuffix(params.name);
-      // This matches the contract's makeCommitment function
-      return keccak256(
-        encodePacked(
-          [
-            "string",
-            "address",
-            "uint256",
-            "bytes32",
-            "address",
-            "bytes32",
-            "bool",
-          ],
-          [
-            nameWithoutSuffix,
-            params.owner,
-            params.duration,
-            secretValue,
-            params.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
-            keccak256(encodePacked(["bytes[]"], [params.data ?? []])),
-            params.reverseRecord ?? true,
-          ]
-        )
+      // This matches the contract's makeCommitment function which uses abi.encode
+      const encoded = encodeAbiParameters(
+        [
+          { type: "string" },
+          { type: "address" },
+          { type: "uint256" },
+          { type: "bytes32" },
+          { type: "address" },
+          { type: "bytes[]" },
+          { type: "bool" },
+        ],
+        [
+          nameWithoutSuffix,
+          params.owner,
+          params.duration,
+          secretValue,
+          params.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
+          params.data ?? [],
+          params.reverseRecord ?? true,
+        ]
       );
+      return keccak256(encoded);
     },
     []
   );

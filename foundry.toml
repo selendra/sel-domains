@@ -1,0 +1,40 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.20"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+evm_version = "london"
+gas_reports = ["*"]
+
+# Fuzz testing
+[profile.default.fuzz]
+runs = 256
+max_test_rejects = 65536
+
+# CI fuzz with more runs
+[profile.ci.fuzz]
+runs = 10000
+
+# RPC endpoints
+[rpc_endpoints]
+selendra_mainnet = "https://rpc.selendra.org"
+selendra_testnet = "https://rpc-testnet.selendra.org"
+localhost = "http://127.0.0.1:8545"
+
+# Block explorer verification
+[etherscan]
+selendra_mainnet = { key = "${ETHERSCAN_API_KEY}", url = "https://explorer.selendra.org/api" }
+selendra_testnet = { key = "${ETHERSCAN_API_KEY}", url = "https://explorer-testnet.selendra.org/api" }
+
+# Formatting
+[fmt]
+line_length = 100
+tab_width = 4
+bracket_spacing = true
+int_types = "long"
+multiline_func_header = "params_first"
+quote_style = "double"
+number_underscore = "thousands"

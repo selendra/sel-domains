@@ -1,24 +1,24 @@
-// TODO: Replace with actual deployed contract addresses
+// Testnet contract addresses (deployed 2025-01-17)
 export const CONTRACT_ADDRESSES = {
   // Core registry
-  SNSRegistry: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  SNSRegistry: "0x64Ff7c36e879516724dFE312c5D6C704d6bD6be1" as `0x${string}`,
 
   // Registration controller
   SELRegistrarController:
-    "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    "0xD45c5b8df20Bb0be78e85aeaE56606D385770691" as `0x${string}`,
 
   // Resolver
-  PublicResolver: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  PublicResolver: "0x4d379C8bbee421f6742b078956F2714D701Aa997" as `0x${string}`,
 
   // Price oracle
-  PriceOracle: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  PriceOracle: "0xf157c876e1206A2AA22A36EF034986e8B621a851" as `0x${string}`,
 
   // Reverse registrar
   ReverseRegistrar:
-    "0x0000000000000000000000000000000000000000" as `0x${string}`,
+    "0x009439C9b8BFa22f5cbdEb479bAA8e5Fa2041899" as `0x${string}`,
 
   // Base registrar (NFT contract)
-  BaseRegistrar: "0x0000000000000000000000000000000000000000" as `0x${string}`,
+  BaseRegistrar: "0x875C6bDc6C315FCFF1429B80D39C0259E5cFcaa3" as `0x${string}`,
 } as const;
 
 // ============ SNS Registry ABI ============

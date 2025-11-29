@@ -58,11 +58,11 @@ export function ConnectWallet() {
               }
 
               return (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 sm:gap-2">
                   <button
                     onClick={openChainModal}
                     type="button"
-                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition-colors duration-200"
+                    className="flex items-center gap-1 sm:gap-2 bg-gray-800 hover:bg-gray-700 text-white py-2 px-2 sm:px-3 rounded-lg transition-colors duration-200"
                   >
                     {chain.hasIcon && (
                       <div
@@ -72,6 +72,7 @@ export function ConnectWallet() {
                           height: 20,
                           borderRadius: 999,
                           overflow: "hidden",
+                          flexShrink: 0,
                         }}
                       >
                         {chain.iconUrl && (
@@ -90,13 +91,15 @@ export function ConnectWallet() {
                   <button
                     onClick={openAccountModal}
                     type="button"
-                    className="flex items-center gap-2 bg-gray-800 hover:bg-gray-700 text-white py-2 px-3 rounded-lg transition-colors duration-200"
+                    className="flex items-center gap-1 sm:gap-2 bg-gray-800 hover:bg-gray-700 text-white py-2 px-2 sm:px-3 rounded-lg transition-colors duration-200 truncate max-w-[120px] sm:max-w-none"
                   >
-                    <span>
+                    <span className="truncate">
                       {account.displayName}
-                      {account.displayBalance
-                        ? ` (${account.displayBalance})`
-                        : ""}
+                      <span className="hidden sm:inline">
+                        {account.displayBalance && !account.displayBalance.includes('NaN')
+                          ? ` (${account.displayBalance})`
+                          : ""}
+                      </span>
                     </span>
                   </button>
                 </div>

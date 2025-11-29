@@ -11,10 +11,11 @@ import "./SNSRegistry.sol";
 contract ReverseRegistrar {
     ISNSRegistry public immutable sns;
     address public immutable resolver;
-    
+
     // The namehash of addr.reverse
     // namehash("addr.reverse") = keccak256(keccak256(0x0, keccak256("reverse")), keccak256("addr"))
-    bytes32 public constant ADDR_REVERSE_NODE = 0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;
+    bytes32 public constant ADDR_REVERSE_NODE =
+        0x91d1777781884d03a6757a803996e38de2a42967fb37eeaca72729271025a9e2;
 
     event ReverseClaimed(address indexed addr, bytes32 indexed node);
 
@@ -47,17 +48,16 @@ contract ReverseRegistrar {
         string memory name
     ) public returns (bytes32) {
         require(
-            addr == msg.sender || 
-            sns.isApprovedForAll(addr, msg.sender),
+            addr == msg.sender || sns.isApprovedForAll(addr, msg.sender),
             "ReverseRegistrar: Not authorised"
         );
-        
-        bytes32 node = _claimForAddr(addr, owner, resolverAddr);
-        
+
+        bytes32 reverseNode = _claimForAddr(addr, owner, resolverAddr);
+
         // Set the name in the resolver
-        INameResolver(resolverAddr).setName(node, name);
-        
-        return node;
+        INameResolver(resolverAddr).setName(reverseNode, name);
+
+        return reverseNode;
     }
 
     /**
@@ -67,13 +67,16 @@ contract ReverseRegistrar {
      * @param resolverAddr The resolver to use
      * @return The namehash of the reverse record
      */
-    function claim(address addr, address owner, address resolverAddr) public returns (bytes32) {
+    function claim(
+        address addr,
+        address owner,
+        address resolverAddr
+    ) public returns (bytes32) {
         require(
-            addr == msg.sender || 
-            sns.isApprovedForAll(addr, msg.sender),
+            addr == msg.sender || sns.isApprovedForAll(addr, msg.sender),
             "ReverseRegistrar: Not authorised"
         );
-        
+
         return _claimForAddr(addr, owner, resolverAddr);
     }
 
@@ -83,7 +86,10 @@ contract ReverseRegistrar {
      * @return The namehash of the reverse record
      */
     function node(address addr) public pure returns (bytes32) {
-        return keccak256(abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(addr)));
+        return
+            keccak256(
+                abi.encodePacked(ADDR_REVERSE_NODE, sha3HexAddress(addr))
+            );
     }
 
     // Internal functions
@@ -94,13 +100,15 @@ contract ReverseRegistrar {
         address resolverAddr
     ) internal returns (bytes32) {
         bytes32 label = sha3HexAddress(addr);
-        bytes32 reverseNode = keccak256(abi.encodePacked(ADDR_REVERSE_NODE, label));
-        
+        bytes32 reverseNode = keccak256(
+            abi.encodePacked(ADDR_REVERSE_NODE, label)
+        );
+
         // Set the subnode owner
         sns.setSubnodeRecord(ADDR_REVERSE_NODE, label, owner, resolverAddr, 0);
-        
+
         emit ReverseClaimed(addr, reverseNode);
-        
+
         return reverseNode;
     }
 
@@ -112,7 +120,9 @@ contract ReverseRegistrar {
     function sha3HexAddress(address addr) internal pure returns (bytes32) {
         bytes memory s = new bytes(40);
         for (uint256 i = 0; i < 20; i++) {
-            bytes1 b = bytes1(uint8(uint256(uint160(addr)) / (2 ** (8 * (19 - i)))));
+            bytes1 b = bytes1(
+                uint8(uint256(uint160(addr)) / (2 ** (8 * (19 - i))))
+            );
             bytes1 hi = bytes1(uint8(b) / 16);
             bytes1 lo = bytes1(uint8(b) - 16 * uint8(hi));
             s[2 * i] = char(hi);

@@ -1,41 +1,25 @@
 "use client";
 
 import { ReactNode } from "react";
-import { WagmiProvider, http } from "wagmi";
+import { WagmiProvider, http, createConfig } from "wagmi";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
   RainbowKitProvider,
-  getDefaultConfig,
+  connectorsForWallets,
   darkTheme,
 } from "@rainbow-me/rainbowkit";
+import {
+  injectedWallet,
+  metaMaskWallet,
+  walletConnectWallet,
+} from "@rainbow-me/rainbowkit/wallets";
 import { defineChain } from "viem";
 import "@rainbow-me/rainbowkit/styles.css";
 
-// Define Selendra Mainnet
-const selendraMainnet = defineChain({
-  id: 1961,
-  name: "Selendra",
-  nativeCurrency: {
-    decimals: 18,
-    name: "Selendra",
-    symbol: "SEL",
-  },
-  rpcUrls: {
-    default: {
-      http: ["https://rpc.selendra.org"],
-    },
-  },
-  blockExplorers: {
-    default: {
-      name: "Selendra Explorer",
-      url: "https://scan.selendra.org",
-    },
-  },
-});
-
-// Define Selendra Testnet
+// Define Selendra Testnet (Chain ID 1961 - same as mainnet, different RPC)
+// For development, we use testnet by default
 const selendraTestnet = defineChain({
-  id: 1953,
+  id: 1961,
   name: "Selendra Testnet",
   nativeCurrency: {
     decimals: 18,
@@ -49,20 +33,32 @@ const selendraTestnet = defineChain({
   },
   blockExplorers: {
     default: {
-      name: "Selendra Testnet Explorer",
-      url: "https://scan.selendra.org",
+      name: "Selendra Explorer",
+      url: "https://scan-testnet.selendra.org",
     },
   },
   testnet: true,
 });
 
-// Configure wagmi with RainbowKit
-const config = getDefaultConfig({
-  appName: "SNS - Selendra Naming Service",
-  projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "YOUR_PROJECT_ID",
-  chains: [selendraMainnet, selendraTestnet],
+// Only use the wallets we actually need
+const connectors = connectorsForWallets(
+  [
+    {
+      groupName: "Recommended",
+      wallets: [injectedWallet, metaMaskWallet, walletConnectWallet],
+    },
+  ],
+  {
+    appName: "SNS - Selendra Naming Service",
+    projectId: process.env.NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID || "demo",
+  }
+);
+
+// Configure wagmi - using only testnet for now
+const config = createConfig({
+  connectors,
+  chains: [selendraTestnet],
   transports: {
-    [selendraMainnet.id]: http("https://rpc.selendra.org"),
     [selendraTestnet.id]: http("https://rpc-testnet.selendra.org"),
   },
   ssr: true,
