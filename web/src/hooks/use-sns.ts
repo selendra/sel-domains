@@ -544,6 +544,9 @@ export function useReverseResolve(address: string) {
 
 // ============ useOwnedDomains ============
 
+// Old controller address (for fetching historical NameRegistered events)
+const OLD_CONTROLLER_ADDRESS = "0x76B2F67AE09E2956967DF4303d9e914791B323dC" as Address;
+
 /**
  * Get domains owned by an address
  * Note: This uses events to find owned domains. For production,
@@ -566,23 +569,37 @@ export function useOwnedDomains(ownerAddress: string) {
     setError(null);
 
     try {
-      // First, get all NameRegistered events to build tokenId -> name mapping
-      const nameRegisteredLogs = await publicClient.getLogs({
+      // Get NameRegistered events from BOTH old and new controllers
+      const nameRegisteredEvent = {
+        type: "event" as const,
+        name: "NameRegistered" as const,
+        inputs: [
+          { name: "name", type: "string", indexed: false },
+          { name: "label", type: "bytes32", indexed: true },
+          { name: "owner", type: "address", indexed: true },
+          { name: "cost", type: "uint256", indexed: false },
+          { name: "expires", type: "uint256", indexed: false },
+        ],
+      };
+
+      // Query new controller
+      const newControllerLogs = await publicClient.getLogs({
         address: CONTRACT_ADDRESSES.SELRegistrarController,
-        event: {
-          type: "event",
-          name: "NameRegistered",
-          inputs: [
-            { name: "name", type: "string", indexed: false },
-            { name: "label", type: "bytes32", indexed: true },
-            { name: "owner", type: "address", indexed: true },
-            { name: "cost", type: "uint256", indexed: false },
-            { name: "expires", type: "uint256", indexed: false },
-          ],
-        },
+        event: nameRegisteredEvent,
         fromBlock: "earliest",
         toBlock: "latest",
       });
+
+      // Query old controller
+      const oldControllerLogs = await publicClient.getLogs({
+        address: OLD_CONTROLLER_ADDRESS,
+        event: nameRegisteredEvent,
+        fromBlock: "earliest",
+        toBlock: "latest",
+      });
+
+      // Combine logs from both controllers
+      const nameRegisteredLogs = [...newControllerLogs, ...oldControllerLogs];
 
       // Build a map from labelhash (tokenId as hex) to name
       const labelToName = new Map<string, string>();
