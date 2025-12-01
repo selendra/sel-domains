@@ -1,7 +1,7 @@
 "use client";
 
 import { useAccount, useConnect, useDisconnect, useSwitchChain, useBalance } from "wagmi";
-import { selendraTestnet } from "./providers";
+import { activeChain } from "./providers";
 
 export function ConnectWallet() {
   const { address, isConnected, chain } = useAccount();
@@ -24,7 +24,7 @@ export function ConnectWallet() {
   };
 
   // Check if on wrong network
-  const isWrongNetwork = isConnected && chain?.id !== selendraTestnet.id;
+  const isWrongNetwork = isConnected && chain?.id !== activeChain.id;
 
   if (!isConnected) {
     return (
@@ -64,7 +64,7 @@ export function ConnectWallet() {
   if (isWrongNetwork) {
     return (
       <button
-        onClick={() => switchChain?.({ chainId: selendraTestnet.id })}
+        onClick={() => switchChain?.({ chainId: activeChain.id })}
         type="button"
         className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
       >
