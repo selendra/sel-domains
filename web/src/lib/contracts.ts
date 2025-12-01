@@ -1,24 +1,41 @@
-// Testnet contract addresses (deployed 2025-01-17)
+/**
+ * Contract addresses loaded from environment variables
+ * Set these in .env.local or via deployment pipeline
+ * 
+ * Required env vars:
+ * - NEXT_PUBLIC_SNS_REGISTRY
+ * - NEXT_PUBLIC_SEL_REGISTRAR_CONTROLLER
+ * - NEXT_PUBLIC_PUBLIC_RESOLVER
+ * - NEXT_PUBLIC_PRICE_ORACLE
+ * - NEXT_PUBLIC_REVERSE_REGISTRAR
+ * - NEXT_PUBLIC_BASE_REGISTRAR
+ */
+
+const getAddress = (envVar: string, fallback: string): `0x${string}` => {
+  const value = process.env[envVar] || fallback;
+  if (!value.startsWith("0x")) {
+    throw new Error(`Invalid address for ${envVar}: ${value}`);
+  }
+  return value as `0x${string}`;
+};
+
+// Default addresses (testnet - chain 1953, deployed 2025-01-24)
+const TESTNET_DEFAULTS = {
+  SNSRegistry: "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a",
+  SELRegistrarController: "0x76B2F67AE09E2956967DF4303d9e914791B323dC",
+  PublicResolver: "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a",
+  PriceOracle: "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890",
+  ReverseRegistrar: "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E",
+  BaseRegistrar: "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6",
+};
+
 export const CONTRACT_ADDRESSES = {
-  // Core registry
-  SNSRegistry: "0x64Ff7c36e879516724dFE312c5D6C704d6bD6be1" as `0x${string}`,
-
-  // Registration controller
-  SELRegistrarController:
-    "0xD45c5b8df20Bb0be78e85aeaE56606D385770691" as `0x${string}`,
-
-  // Resolver
-  PublicResolver: "0x4d379C8bbee421f6742b078956F2714D701Aa997" as `0x${string}`,
-
-  // Price oracle
-  PriceOracle: "0xf157c876e1206A2AA22A36EF034986e8B621a851" as `0x${string}`,
-
-  // Reverse registrar
-  ReverseRegistrar:
-    "0x009439C9b8BFa22f5cbdEb479bAA8e5Fa2041899" as `0x${string}`,
-
-  // Base registrar (NFT contract)
-  BaseRegistrar: "0x875C6bDc6C315FCFF1429B80D39C0259E5cFcaa3" as `0x${string}`,
+  SNSRegistry: getAddress("NEXT_PUBLIC_SNS_REGISTRY", TESTNET_DEFAULTS.SNSRegistry),
+  SELRegistrarController: getAddress("NEXT_PUBLIC_SEL_REGISTRAR_CONTROLLER", TESTNET_DEFAULTS.SELRegistrarController),
+  PublicResolver: getAddress("NEXT_PUBLIC_PUBLIC_RESOLVER", TESTNET_DEFAULTS.PublicResolver),
+  PriceOracle: getAddress("NEXT_PUBLIC_PRICE_ORACLE", TESTNET_DEFAULTS.PriceOracle),
+  ReverseRegistrar: getAddress("NEXT_PUBLIC_REVERSE_REGISTRAR", TESTNET_DEFAULTS.ReverseRegistrar),
+  BaseRegistrar: getAddress("NEXT_PUBLIC_BASE_REGISTRAR", TESTNET_DEFAULTS.BaseRegistrar),
 } as const;
 
 // ============ SNS Registry ABI ============

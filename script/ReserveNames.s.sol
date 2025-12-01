@@ -24,7 +24,7 @@ contract ReserveNames is Script {
         vm.startBroadcast(deployerPrivateKey);
         
         // ============ Brand Names ============
-        string[] memory brandNames = new string[](10);
+        string[] memory brandNames = new string[](15);
         brandNames[0] = "selendra";
         brandNames[1] = "bitriel";
         brandNames[2] = "baray";
@@ -36,11 +36,10 @@ contract ReserveNames is Script {
         brandNames[8] = "sel";
         brandNames[9] = "admin";
         brandNames[10] = "grood";
-        brandNames[10] = "sv";        
-        brandNames[10] = "sw";
-        brandNames[10] = "nimmit";
-        brandNames[10] = "nimit";
-        brandNames[10] = "nimmit";
+        brandNames[11] = "sv";        
+        brandNames[12] = "sw";
+        brandNames[13] = "nimmit";
+        brandNames[14] = "nimit";
                 
 
         controller.reserveNames(brandNames);

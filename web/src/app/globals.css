@@ -16,7 +16,7 @@
   --selendra-700: #087670;
   --selendra-800: #065a56;
   --selendra-900: #043d3b;
-  
+
   /* shadcn variables */
   --radius: 0.5rem;
   --background: 0 0% 100%;
@@ -92,7 +92,7 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  
+
   /* Selendra brand colors in theme */
   --color-selendra-50: var(--selendra-50);
   --color-selendra-100: var(--selendra-100);
@@ -110,7 +110,13 @@
   * {
     @apply border-border;
   }
+
   body {
     @apply bg-background text-foreground antialiased;
+  }
+
+  /* Prevent scrollbar shift when content changes */
+  html {
+    overflow-y: scroll;
   }
 }

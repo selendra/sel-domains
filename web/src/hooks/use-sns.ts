@@ -36,6 +36,7 @@ export interface RegistrationParams {
   name: string;
   owner: Address;
   duration: bigint;
+  secret: `0x${string}`;  // Secret MUST be provided by caller
   resolver?: Address;
   data?: `0x${string}`[];
   reverseRecord?: boolean;
@@ -150,21 +151,33 @@ export function useRegisterDomain() {
     error: registerError,
   } = useWriteContract();
 
-  // Wait for commit transaction
-  const { isLoading: isCommitConfirming, isSuccess: isCommitConfirmed } =
-    useWaitForTransactionReceipt({
-      hash: commitTxHash,
-    });
+  // Wait for commit transaction - poll every 2 seconds for Selendra
+  const {
+    isLoading: isCommitConfirming,
+    isSuccess: isCommitConfirmed,
+    isError: isCommitFailed,
+    error: commitReceiptError,
+  } = useWaitForTransactionReceipt({
+    hash: commitTxHash,
+    pollingInterval: 2000,
+    confirmations: 1,
+  });
 
-  // Wait for register transaction
-  const { isLoading: isRegisterConfirming, isSuccess: isRegisterConfirmed } =
-    useWaitForTransactionReceipt({
-      hash: registerTxHash,
-    });
+  // Wait for register transaction - poll every 2 seconds for Selendra
+  const {
+    isLoading: isRegisterConfirming,
+    isSuccess: isRegisterConfirmed,
+    isError: isRegisterFailed,
+    error: registerReceiptError,
+  } = useWaitForTransactionReceipt({
+    hash: registerTxHash,
+    pollingInterval: 2000,
+    confirmations: 1,
+  });
 
   // Derive the actual step from transaction states (pure computation)
   const step: RegistrationStep = (() => {
-    if (internalStep === "error") return "error";
+    if (internalStep === "error" || isCommitFailed || isRegisterFailed) return "error";
     if (isRegisterConfirmed) return "complete";
     if (
       internalStep === "registering" ||
@@ -178,12 +191,8 @@ export function useRegisterDomain() {
     return internalStep;
   })();
 
-  // Generate a random secret
-  const generateSecret = useCallback((): `0x${string}` => {
-    const randomBytes = new Uint8Array(32);
-    crypto.getRandomValues(randomBytes);
-    return toHex(randomBytes);
-  }, []);
+  // NOTE: Secret generation moved to caller (registration-flow.tsx)
+  // The caller MUST provide the secret in RegistrationParams so it can be saved to localStorage
 
   // Calculate commitment hash (matching contract logic)
   const calculateCommitment = useCallback(
@@ -229,26 +238,39 @@ export function useRegisterDomain() {
         setRegistrationParams(params);
         setCommitTimestamp(null); // Reset timestamp for new registration
 
-        // Generate secret and commitment
-        const newSecret = generateSecret();
-        setSecret(newSecret);
+        // Use the secret provided by caller (so caller can save it to localStorage)
+        const secretToUse = params.secret;
+        setSecret(secretToUse);
 
-        const newCommitment = calculateCommitment(params, newSecret);
+        const newCommitment = calculateCommitment(params, secretToUse);
         setCommitment(newCommitment);
 
-        // Submit commitment
+        // Debug logging
+        console.log("[SNS] Commit params:", {
+          name: removeSuffix(params.name),
+          owner: params.owner,
+          duration: params.duration.toString(),
+          secret: secretToUse,
+          resolver: params.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
+          data: params.data ?? [],
+          reverseRecord: params.reverseRecord ?? true,
+          commitment: newCommitment,
+        });
+
+        // Submit commitment - use legacy transactions for Selendra
         writeCommit({
           address: CONTRACT_ADDRESSES.SELRegistrarController,
           abi: SELRegistrarControllerABI,
           functionName: "commit",
           args: [newCommitment],
+          type: "legacy" as const,
         });
       } catch (err) {
         setError(err as Error);
         setInternalStep("error");
       }
     },
-    [address, generateSecret, calculateCommitment, writeCommit]
+    [address, calculateCommitment, writeCommit]
   );
 
   // Track when commit is confirmed to set timestamp
@@ -260,26 +282,27 @@ export function useRegisterDomain() {
   }, [commitTimestamp, isCommitConfirmed]);
 
   // Complete registration after waiting period
-  const completeRegistration = useCallback(async () => {
-    if (!registrationParams || !secret || step !== "waiting") {
-      return;
-    }
+  // Can accept overrides for when restoring from localStorage after page refresh
+  const completeRegistration = useCallback(async (overrides?: {
+    name: string;
+    owner: Address;
+    duration: bigint;
+    secret: `0x${string}`;
+  }) => {
+    const params = overrides ? {
+      name: overrides.name,
+      owner: overrides.owner,
+      duration: overrides.duration,
+      resolver: CONTRACT_ADDRESSES.PublicResolver,
+      data: [] as `0x${string}`[],
+      reverseRecord: true,
+    } : registrationParams;
 
-    // Ensure timestamp is set
-    let currentTimestamp = commitTimestamp;
-    if (currentTimestamp === null) {
-      currentTimestamp = Date.now();
-      setCommitTimestamp(currentTimestamp);
-    }
+    const secretToUse = overrides?.secret ?? secret;
 
-    // Check if enough time has passed
-    const elapsed = (Date.now() - currentTimestamp) / 1000;
-    if (elapsed < MIN_COMMITMENT_AGE) {
-      setError(
-        new Error(
-          `Please wait ${Math.ceil(MIN_COMMITMENT_AGE - elapsed)} more seconds`
-        )
-      );
+    if (!params || !secretToUse) {
+      setError(new Error("Missing registration parameters. Please start over."));
+      setInternalStep("error");
       return;
     }
 
@@ -287,14 +310,25 @@ export function useRegisterDomain() {
       setError(null);
       setInternalStep("registering");
 
-      const nameWithoutSuffix = removeSuffix(registrationParams.name);
+      const nameWithoutSuffix = removeSuffix(params.name);
+
+      // Debug logging
+      console.log("[SNS] Register params:", {
+        name: nameWithoutSuffix,
+        owner: params.owner,
+        duration: params.duration.toString(),
+        secret: secretToUse,
+        resolver: params.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
+        data: params.data ?? [],
+        reverseRecord: params.reverseRecord ?? true,
+      });
 
       // Get the price
       const price = await publicClient?.readContract({
         address: CONTRACT_ADDRESSES.SELRegistrarController,
         abi: SELRegistrarControllerABI,
         functionName: "rentPrice",
-        args: [nameWithoutSuffix, registrationParams.duration],
+        args: [nameWithoutSuffix, params.duration],
       });
 
       const [basePrice, premium] = price ?? [BigInt(0), BigInt(0)];
@@ -303,20 +337,28 @@ export function useRegisterDomain() {
       // Add 10% buffer for gas price fluctuations
       const valueWithBuffer = (totalPrice * BigInt(110)) / BigInt(100);
 
+      console.log("[SNS] Register price:", {
+        basePrice: basePrice.toString(),
+        premium: premium.toString(),
+        total: totalPrice.toString(),
+        withBuffer: valueWithBuffer.toString(),
+      });
+
       writeRegister({
         address: CONTRACT_ADDRESSES.SELRegistrarController,
         abi: SELRegistrarControllerABI,
         functionName: "register",
         args: [
           nameWithoutSuffix,
-          registrationParams.owner,
-          registrationParams.duration,
-          secret,
-          registrationParams.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
-          registrationParams.data ?? [],
-          registrationParams.reverseRecord ?? true,
+          params.owner,
+          params.duration,
+          secretToUse,
+          params.resolver ?? CONTRACT_ADDRESSES.PublicResolver,
+          params.data ?? [],
+          params.reverseRecord ?? true,
         ],
         value: valueWithBuffer,
+        type: "legacy" as const,
       });
     } catch (err) {
       setError(err as Error);
@@ -325,15 +367,17 @@ export function useRegisterDomain() {
   }, [
     registrationParams,
     secret,
-    step,
-    commitTimestamp,
     publicClient,
     writeRegister,
   ]);
 
-  // Sync errors from write hooks
+  // Sync errors from write hooks and receipt errors
   const currentError =
-    error || (commitError as Error | null) || (registerError as Error | null);
+    error ||
+    (commitError as Error | null) ||
+    (registerError as Error | null) ||
+    (commitReceiptError as Error | null) ||
+    (registerReceiptError as Error | null);
 
   // Calculate remaining wait time using a callback to avoid impure function call during render
   const getRemainingWaitTime = useCallback(() => {
@@ -417,6 +461,7 @@ export function useRenewDomain() {
         functionName: "renew",
         args: [nameWithoutSuffix, duration],
         value: valueWithBuffer,
+        type: "legacy" as const,
       });
     },
     [publicClient, writeContract]
@@ -733,6 +778,7 @@ export function useSetPrimaryName() {
         abi: ReverseRegistrarABI,
         functionName: "setName",
         args: [name],
+        type: "legacy" as const,
       });
     },
     [writeContract]

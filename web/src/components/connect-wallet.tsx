@@ -1,8 +1,11 @@
 "use client";
 
 import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { useSwitchChain } from "wagmi";
 
 export function ConnectWallet() {
+  const { switchChain } = useSwitchChain();
+
   return (
     <ConnectButton.Custom>
       {({
@@ -20,6 +23,11 @@ export function ConnectWallet() {
           account &&
           chain &&
           (!authenticationStatus || authenticationStatus === "authenticated");
+
+        // Handler to switch to Selendra Testnet (chain ID 1953)
+        const handleSwitchNetwork = () => {
+          switchChain?.({ chainId: 1953 });
+        };
 
         return (
           <div
@@ -48,11 +56,11 @@ export function ConnectWallet() {
               if (chain.unsupported) {
                 return (
                   <button
-                    onClick={openChainModal}
+                    onClick={handleSwitchNetwork}
                     type="button"
                     className="bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg transition-colors duration-200"
                   >
-                    Wrong network
+                    Switch to Selendra
                   </button>
                 );
               }

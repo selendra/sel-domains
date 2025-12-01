@@ -156,7 +156,7 @@ interface DomainDetailsProps {
 
 function DomainDetails({ name }: DomainDetailsProps) {
   const { address: connectedAddress, isConnected } = useAccount();
-  
+
   const { owner, isLoading: isOwnerLoading } = useGetOwner(name);
   const { resolver, isLoading: isResolverLoading } = useGetResolver(name);
   const { address: resolvedAddress, isLoading: isResolvedLoading } = useResolve(name);
@@ -224,7 +224,7 @@ function DomainDetails({ name }: DomainDetailsProps) {
               <span className="font-mono text-sm">{shortenAddress(owner)}</span>
               <CopyButton text={owner} />
               <a
-                href={`https://scan.selendra.org/address/${owner}`}
+                href={`https://portal.selendra.org/?rpc=wss%3A%2F%2Frpc-testnet.selendra.org#/explorer`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-1 rounded hover:bg-muted transition-colors"
@@ -252,7 +252,7 @@ function DomainDetails({ name }: DomainDetailsProps) {
                 <>
                   <CopyButton text={resolver} />
                   <a
-                    href={`https://scan.selendra.org/address/${resolver}`}
+                    href={`https://portal.selendra.org/?rpc=wss%3A%2F%2Frpc-testnet.selendra.org#/explorer`}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="p-1 rounded hover:bg-muted transition-colors"
@@ -308,13 +308,12 @@ function DomainDetails({ name }: DomainDetailsProps) {
                   <Clock className="h-4 w-4" />
                   Time Remaining
                 </div>
-                <span className={`font-medium ${
-                  status === "expired" 
-                    ? "text-red-500" 
-                    : status === "expiring-soon" 
-                    ? "text-amber-500" 
-                    : "text-emerald-500"
-                }`}>
+                <span className={`font-medium ${status === "expired"
+                    ? "text-red-500"
+                    : status === "expiring-soon"
+                      ? "text-amber-500"
+                      : "text-emerald-500"
+                  }`}>
                   {getTimeUntilExpiry(expires)}
                 </span>
               </div>

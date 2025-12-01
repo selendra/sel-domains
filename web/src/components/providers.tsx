@@ -16,10 +16,10 @@ import {
 import { defineChain } from "viem";
 import "@rainbow-me/rainbowkit/styles.css";
 
-// Define Selendra Testnet (Chain ID 1961 - same as mainnet, different RPC)
+// Define Selendra Testnet (Chain ID 1953)
 // For development, we use testnet by default
 const selendraTestnet = defineChain({
-  id: 1961,
+  id: 1953,
   name: "Selendra Testnet",
   nativeCurrency: {
     decimals: 18,
@@ -33,8 +33,8 @@ const selendraTestnet = defineChain({
   },
   blockExplorers: {
     default: {
-      name: "Selendra Explorer",
-      url: "https://scan-testnet.selendra.org",
+      name: "Selendra Portal",
+      url: "https://portal.selendra.org/?rpc=wss%3A%2F%2Frpc-testnet.selendra.org#/explorer",
     },
   },
   testnet: true,
@@ -77,10 +77,11 @@ export function Providers({ children }: ProvidersProps) {
       <QueryClientProvider client={queryClient}>
         <RainbowKitProvider
           theme={darkTheme({
-            accentColor: "#03A9F4",
+            accentColor: "#0db0a4",
             accentColorForeground: "white",
             borderRadius: "medium",
           })}
+          modalSize="compact"
         >
           {children}
         </RainbowKitProvider>

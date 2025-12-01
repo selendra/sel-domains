@@ -14,6 +14,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   useCheckAvailability,
   useGetPrice,
   useRegisterDomain,
@@ -57,6 +64,15 @@ interface StoredRegistrationState {
 const STORAGE_KEY = "sns_registration_state";
 const WAIT_TIME_SECONDS = MIN_COMMITMENT_AGE; // 60 seconds
 
+// Year options for the selector
+const YEAR_OPTIONS = [
+  { years: 1, label: "1 Year", discount: 0 },
+  { years: 2, label: "2 Years", discount: 0.1 },
+  { years: 3, label: "3 Years", discount: 0.1 },
+  { years: 4, label: "4 Years", discount: 0.1 },
+  { years: 5, label: "5 Years", discount: 0.1 },
+];
+
 // Year discount rates (matches contract: 10% for 2+ years)
 const YEAR_DISCOUNTS: Record<number, number> = {
   1: 0,
@@ -90,8 +106,8 @@ function shortenTxHash(hash: string): string {
 }
 
 function getExplorerUrl(txHash: string): string {
-  // Selendra explorer URL - update this based on actual explorer
-  return `https://scan.selendra.org/tx/${txHash}`;
+  // Selendra testnet portal - use the Polkadot.js explorer
+  return `https://portal.selendra.org/?rpc=wss%3A%2F%2Frpc-testnet.selendra.org#/explorer`;
 }
 
 function generateSecret(): `0x${string}` {
@@ -129,7 +145,7 @@ function ConnectWalletPrompt() {
   const { connectors, connect } = useConnect();
 
   return (
-    <Card className="w-full border-amber-200 bg-amber-50">
+    <Card className="mx-auto w-full max-w-[600px] border-amber-200 bg-amber-50">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-amber-800">
           <AlertCircle className="h-5 w-5" />
@@ -170,13 +186,12 @@ function StepIndicator({
           <div key={step.label} className="flex flex-1 items-center">
             <div className="flex flex-col items-center">
               <div
-                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 font-semibold transition-colors ${
-                  index < currentStep
-                    ? "border-[#0db0a4] bg-[#0db0a4] text-white"
-                    : index === currentStep
+                className={`flex h-10 w-10 items-center justify-center rounded-full border-2 font-semibold transition-colors ${index < currentStep
+                  ? "border-[#0db0a4] bg-[#0db0a4] text-white"
+                  : index === currentStep
                     ? "border-[#0db0a4] bg-white text-[#0db0a4]"
                     : "border-gray-300 bg-white text-gray-400"
-                }`}
+                  }`}
               >
                 {index < currentStep ? (
                   <Check className="h-5 w-5" />
@@ -185,18 +200,16 @@ function StepIndicator({
                 )}
               </div>
               <span
-                className={`mt-2 text-xs font-medium ${
-                  index <= currentStep ? "text-[#0a9389]" : "text-gray-400"
-                }`}
+                className={`mt-2 text-xs font-medium ${index <= currentStep ? "text-[#0a9389]" : "text-gray-400"
+                  }`}
               >
                 {step.label}
               </span>
             </div>
             {index < steps.length - 1 && (
               <div
-                className={`mx-2 h-0.5 flex-1 transition-colors ${
-                  index < currentStep ? "bg-[#0db0a4]" : "bg-gray-200"
-                }`}
+                className={`mx-2 h-0.5 flex-1 transition-colors ${index < currentStep ? "bg-[#0db0a4]" : "bg-gray-200"
+                  }`}
               />
             )}
           </div>
@@ -289,8 +302,8 @@ function TransactionStatus({
 // Get base annual price based on name length (matches contract pricing)
 function getBaseAnnualPrice(name: string): bigint {
   // Remove .sel suffix if present to get actual name length
-  const cleanName = name.toLowerCase().endsWith('.sel') 
-    ? name.slice(0, -4) 
+  const cleanName = name.toLowerCase().endsWith('.sel')
+    ? name.slice(0, -4)
     : name;
   const len = cleanName.length;
   if (len === 3) return BigInt(1000) * BigInt(10 ** 18); // 1000 SEL
@@ -304,12 +317,14 @@ function ReviewStep({
   price,
   isLoading,
   onBegin,
+  onYearsChange,
 }: {
   name: string;
   years: number;
   price: bigint;
   isLoading: boolean;
   onBegin: () => void;
+  onYearsChange: (years: number) => void;
 }) {
   const fullName = ensureSuffix(name);
   const discount = YEAR_DISCOUNTS[years] || 0;
@@ -338,11 +353,30 @@ function ReviewStep({
 
         {/* Price Breakdown */}
         <div className="space-y-3">
-          <div className="flex justify-between text-sm">
+          <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Registration Period</span>
-            <span className="font-medium">
-              {years} {years === 1 ? "year" : "years"}
-            </span>
+            <Select
+              value={String(years)}
+              onValueChange={(value) => onYearsChange(Number(value))}
+            >
+              <SelectTrigger className="w-[140px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {YEAR_OPTIONS.map((option) => (
+                  <SelectItem key={option.years} value={String(option.years)}>
+                    <span className="flex items-center gap-2">
+                      <span>{option.label}</span>
+                      {option.discount > 0 && (
+                        <span className="text-xs text-green-600">
+                          -{Math.round(option.discount * 100)}%
+                        </span>
+                      )}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {isLoading ? (
@@ -822,11 +856,12 @@ function ErrorStep({
 // ============ Main Component ============
 
 // Helper to get initial state from localStorage
-function getInitialState(name: string): {
+function getInitialState(name: string, defaultYears: number): {
   flowStep: FlowStep;
   remainingTime: number;
   storedSecret: `0x${string}` | null;
   commitTimestamp: number | null;
+  storedYears: number;
 } {
   if (typeof window === "undefined") {
     return {
@@ -834,6 +869,7 @@ function getInitialState(name: string): {
       remainingTime: WAIT_TIME_SECONDS,
       storedSecret: null,
       commitTimestamp: null,
+      storedYears: defaultYears,
     };
   }
 
@@ -841,6 +877,7 @@ function getInitialState(name: string): {
   if (stored && stored.name === name) {
     const secret = stored.secret ? (stored.secret as `0x${string}`) : null;
     const timestamp = stored.commitTimestamp || null;
+    const years = stored.years || defaultYears;
 
     if (timestamp) {
       const elapsed = (Date.now() - timestamp) / 1000;
@@ -850,6 +887,7 @@ function getInitialState(name: string): {
           remainingTime: WAIT_TIME_SECONDS - elapsed,
           storedSecret: secret,
           commitTimestamp: timestamp,
+          storedYears: years,
         };
       } else if (stored.step === "wait" || stored.step === "commit") {
         return {
@@ -857,6 +895,7 @@ function getInitialState(name: string): {
           remainingTime: 0,
           storedSecret: secret,
           commitTimestamp: timestamp,
+          storedYears: years,
         };
       } else {
         return {
@@ -864,6 +903,7 @@ function getInitialState(name: string): {
           remainingTime: WAIT_TIME_SECONDS,
           storedSecret: secret,
           commitTimestamp: timestamp,
+          storedYears: years,
         };
       }
     }
@@ -874,6 +914,7 @@ function getInitialState(name: string): {
     remainingTime: WAIT_TIME_SECONDS,
     storedSecret: null,
     commitTimestamp: null,
+    storedYears: defaultYears,
   };
 }
 
@@ -932,9 +973,15 @@ function registrationReducer(state: RegistrationState, action: RegistrationActio
   }
 }
 
-export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
+export function RegistrationFlow({ name, years: initialYears }: RegistrationFlowProps) {
   const { address, isConnected } = useAccount();
-  
+
+  // Get initial state from localStorage (includes stored years from commit)
+  const initialState = useMemo(() => getInitialState(name, initialYears), [name, initialYears]);
+
+  // Internal state for years - use stored years if resuming, otherwise use URL param
+  const [selectedYears, setSelectedYears] = useState(initialState.storedYears);
+
   // Use reducer for state management
   const [state, dispatch] = useReducer(registrationReducer, {
     flowStep: "review",
@@ -953,8 +1000,8 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
   const { available, isLoading: isCheckingAvailability } =
     useCheckAvailability(name);
 
-  // Get price
-  const { total: price, isLoading: isPriceLoading } = useGetPrice(name, years);
+  // Get price - use selectedYears for dynamic updates
+  const { total: price, isLoading: isPriceLoading } = useGetPrice(name, selectedYears);
 
   // Registration hook
   const {
@@ -975,18 +1022,21 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
   // Load initial state from localStorage on mount (client-side only)
   useEffect(() => {
     if (!isInitialized) {
-      const initial = getInitialState(name);
       dispatch({
         type: "INITIALIZE",
         payload: {
-          flowStep: initial.flowStep,
-          remainingTime: initial.remainingTime,
-          storedSecret: initial.storedSecret,
-          commitTimestamp: initial.commitTimestamp,
+          flowStep: initialState.flowStep,
+          remainingTime: initialState.remainingTime,
+          storedSecret: initialState.storedSecret,
+          commitTimestamp: initialState.commitTimestamp,
         },
       });
+      // Also update selectedYears if we have a stored value
+      if (initialState.storedYears !== initialYears) {
+        setSelectedYears(initialState.storedYears);
+      }
     }
-  }, [name, isInitialized]);
+  }, [name, isInitialized, initialState, initialYears]);
 
   // Derive flow step from registration hook state
   const derivedFlowStep = useMemo((): FlowStep => {
@@ -1009,7 +1059,7 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
       onCommitConfirmed();
       saveRegistrationState({
         name,
-        years,
+        years: selectedYears,
         secret: storedSecret || "",
         commitTxHash: commitTxHash,
         commitTimestamp: now,
@@ -1018,26 +1068,38 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
     } else if (registrationStep !== "waiting") {
       hasHandledWaiting.current = false;
     }
-    
+
     if (registrationStep === "complete") {
       clearRegistrationState();
     }
-  }, [registrationStep, commitTimestamp, name, years, storedSecret, commitTxHash, onCommitConfirmed]);
+  }, [registrationStep, commitTimestamp, name, selectedYears, storedSecret, commitTxHash, onCommitConfirmed]);
 
-  // Countdown timer
+  // Countdown timer - check immediately and then every second
   useEffect(() => {
     if (derivedFlowStep !== "wait") return;
+    if (!commitTimestamp) return;
 
+    // Check immediately on mount/timestamp change
+    const checkAndUpdate = () => {
+      const elapsed = (Date.now() - commitTimestamp) / 1000;
+      const remaining = Math.max(0, WAIT_TIME_SECONDS - elapsed);
+      dispatch({ type: "SET_REMAINING_TIME", payload: remaining });
+      return remaining;
+    };
+
+    // If already elapsed, transition immediately
+    const initialRemaining = checkAndUpdate();
+    if (initialRemaining <= 0) {
+      dispatch({ type: "SET_FLOW_STEP", payload: "register" });
+      return;
+    }
+
+    // Otherwise start interval
     const interval = setInterval(() => {
-      if (commitTimestamp) {
-        const elapsed = (Date.now() - commitTimestamp) / 1000;
-        const remaining = Math.max(0, WAIT_TIME_SECONDS - elapsed);
-        dispatch({ type: "SET_REMAINING_TIME", payload: remaining });
-
-        if (remaining <= 0) {
-          clearInterval(interval);
-          dispatch({ type: "SET_FLOW_STEP", payload: "register" });
-        }
+      const remaining = checkAndUpdate();
+      if (remaining <= 0) {
+        clearInterval(interval);
+        dispatch({ type: "SET_FLOW_STEP", payload: "register" });
       }
     }, 1000);
 
@@ -1051,35 +1113,48 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
     const secret = generateSecret();
     dispatch({ type: "SET_SECRET", payload: secret });
 
-    // Save initial state
+    // Save initial state BEFORE calling register
+    // This ensures the same secret is used for both commit and register
     saveRegistrationState({
       name,
-      years,
+      years: selectedYears,
       secret,
       step: "commit",
     });
 
+    // Pass the secret to register() so the hook uses the SAME secret we saved
     register({
       name,
       owner: address,
-      duration: BigInt(years) * SECONDS_PER_YEAR,
+      duration: BigInt(selectedYears) * SECONDS_PER_YEAR,
+      secret,  // <-- CRITICAL: Pass the same secret we saved to localStorage
       reverseRecord: true,
     });
-  }, [address, name, years, register]);
+  }, [address, name, selectedYears, register]);
 
-  // Handle complete registration
+  // Handle complete registration - pass stored params if hook state was lost (page refresh)
   const handleComplete = useCallback(() => {
-    completeRegistration();
-  }, [completeRegistration]);
+    if (address && storedSecret) {
+      // Pass overrides in case hook state was lost after page refresh
+      completeRegistration({
+        name,
+        owner: address,
+        duration: BigInt(selectedYears) * SECONDS_PER_YEAR,
+        secret: storedSecret,
+      });
+    } else {
+      completeRegistration();
+    }
+  }, [address, name, selectedYears, storedSecret, completeRegistration]);
 
   // Handle retry
   const handleRetry = useCallback(() => {
     if (derivedFlowStep === "commit") {
       handleBegin();
     } else if (derivedFlowStep === "register" || derivedFlowStep === "error") {
-      completeRegistration();
+      handleComplete();
     }
-  }, [derivedFlowStep, handleBegin, completeRegistration]);
+  }, [derivedFlowStep, handleBegin, handleComplete]);
 
   // Handle reset
   const handleReset = useCallback(() => {
@@ -1131,14 +1206,14 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
     derivedFlowStep === "review"
       ? 0
       : derivedFlowStep === "commit"
-      ? 1
-      : derivedFlowStep === "wait"
-      ? 2
-      : derivedFlowStep === "register"
-      ? 3
-      : derivedFlowStep === "success"
-      ? 4
-      : 0;
+        ? 1
+        : derivedFlowStep === "wait"
+          ? 2
+          : derivedFlowStep === "register"
+            ? 3
+            : derivedFlowStep === "success"
+              ? 4
+              : 0;
 
   return (
     <div className="mx-auto max-w-2xl">
@@ -1151,10 +1226,11 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
       {derivedFlowStep === "review" && (
         <ReviewStep
           name={name}
-          years={years}
+          years={selectedYears}
           price={price}
           isLoading={isPriceLoading}
           onBegin={handleBegin}
+          onYearsChange={setSelectedYears}
         />
       )}
 
@@ -1191,7 +1267,7 @@ export function RegistrationFlow({ name, years }: RegistrationFlowProps) {
       {derivedFlowStep === "success" && (
         <SuccessStep
           name={name}
-          years={years}
+          years={selectedYears}
           txHash={registerTxHash}
           onReset={handleReset}
         />
