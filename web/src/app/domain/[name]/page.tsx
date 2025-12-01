@@ -194,7 +194,7 @@ function DomainDetails({ name }: DomainDetailsProps) {
             </Badge>
           )}
         </div>
-        <Link href="/my-domains">
+        <Link href="/domains">
           <Button variant="outline" size="sm">
             <ArrowLeft className="h-4 w-4 mr-2" />
             My Domains
@@ -309,10 +309,10 @@ function DomainDetails({ name }: DomainDetailsProps) {
                   Time Remaining
                 </div>
                 <span className={`font-medium ${status === "expired"
-                    ? "text-red-500"
-                    : status === "expiring-soon"
-                      ? "text-amber-500"
-                      : "text-emerald-500"
+                  ? "text-red-500"
+                  : status === "expiring-soon"
+                    ? "text-amber-500"
+                    : "text-emerald-500"
                   }`}>
                   {getTimeUntilExpiry(expires)}
                 </span>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -59,6 +59,7 @@ function TextRecordInput({
 }) {
   const [localValue, setLocalValue] = useState(defaultValue);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [savedValue, setSavedValue] = useState<string | null>(null);
 
   const {
     setTextRecord,
@@ -68,20 +69,34 @@ function TextRecordInput({
     error,
   } = useSetTextRecord();
 
-  const hasChanges = localValue !== defaultValue;
+  // Compare against savedValue if we just saved, otherwise compare to defaultValue
+  const comparisonValue = savedValue !== null ? savedValue : defaultValue;
+  const hasChanges = localValue !== comparisonValue;
 
   // Show success message when transaction completes
-  if (isSuccess && !showSuccess && !hasChanges) {
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  }
+  useEffect(() => {
+    if (isSuccess && savedValue !== null) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, savedValue]);
+
+  // Update local value when default value changes (e.g., after refetch)
+  useEffect(() => {
+    if (savedValue === null) {
+      setLocalValue(defaultValue);
+    }
+  }, [defaultValue, savedValue]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalValue(e.target.value);
     setShowSuccess(false);
+    setSavedValue(null); // Reset saved value when user starts editing again
   };
 
   const handleSave = () => {
+    setSavedValue(localValue); // Track what we're saving
     setTextRecord(name, recordKey, localValue);
   };
 
@@ -103,12 +118,12 @@ function TextRecordInput({
           disabled={!isOwner || isLoading || isLoadingValue}
           className="flex-1"
         />
-        {isOwner && hasChanges && (
+        {isOwner && (
           <Button
             onClick={handleSave}
-            disabled={isLoading}
+            disabled={isLoading || !hasChanges}
             size="sm"
-            className="bg-[#0db0a4] hover:bg-[#0a9389]"
+            className="bg-[#0db0a4] hover:bg-[#0a9389] disabled:opacity-50"
           >
             {isLoading ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -174,6 +189,7 @@ function AddressInput({
 }) {
   const [localAddress, setLocalAddress] = useState(defaultAddress);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [savedAddress, setSavedAddress] = useState<string | null>(null);
 
   const {
     setAddress,
@@ -183,23 +199,37 @@ function AddressInput({
     error,
   } = useSetAddress();
 
-  const hasChanges = localAddress.toLowerCase() !== defaultAddress.toLowerCase();
+  // Compare against savedAddress if we just saved, otherwise compare to defaultAddress
+  const comparisonAddress = savedAddress !== null ? savedAddress : defaultAddress;
+  const hasChanges = localAddress.toLowerCase() !== comparisonAddress.toLowerCase();
   const isLoading = isPending || isConfirming;
   const isValidAddress = localAddress.startsWith("0x") && localAddress.length === 42;
 
   // Show success message when transaction completes
-  if (isSuccess && !showSuccess && !hasChanges) {
-    setShowSuccess(true);
-    setTimeout(() => setShowSuccess(false), 3000);
-  }
+  useEffect(() => {
+    if (isSuccess && savedAddress !== null) {
+      setShowSuccess(true);
+      const timer = setTimeout(() => setShowSuccess(false), 3000);
+      return () => clearTimeout(timer);
+    }
+  }, [isSuccess, savedAddress]);
+
+  // Update local address when default address changes (e.g., after refetch)
+  useEffect(() => {
+    if (savedAddress === null && defaultAddress) {
+      setLocalAddress(defaultAddress);
+    }
+  }, [defaultAddress, savedAddress]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setLocalAddress(e.target.value);
     setShowSuccess(false);
+    setSavedAddress(null); // Reset saved address when user starts editing again
   };
 
   const handleSave = () => {
     if (isValidAddress) {
+      setSavedAddress(localAddress); // Track what we're saving
       setAddress(name, localAddress as Address);
     }
   };
@@ -224,12 +254,12 @@ function AddressInput({
             disabled={!isOwner || isLoading || isLoadingAddress}
             className="flex-1 font-mono text-sm"
           />
-          {isOwner && hasChanges && (
+          {isOwner && (
             <Button
               onClick={handleSave}
-              disabled={isLoading || !isValidAddress}
+              disabled={isLoading || !isValidAddress || !hasChanges}
               size="sm"
-              className="bg-[#0db0a4] hover:bg-[#0a9389]"
+              className="bg-[#0db0a4] hover:bg-[#0a9389] disabled:opacity-50"
             >
               {isLoading ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -269,7 +299,7 @@ function AddressInputWrapper({
   isOwner: boolean;
 }) {
   const { address: resolvedAddress, isLoading } = useResolve(name);
-  
+
   // Use key to reset component state when address changes from external update
   return (
     <AddressInput

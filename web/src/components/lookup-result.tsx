@@ -135,7 +135,7 @@ function LoadingSkeleton() {
 // Not found component for name lookup
 function NameNotFound({ name }: { name: string }) {
   const displayName = ensureSuffix(name);
-  
+
   return (
     <Card className="w-full max-w-2xl mx-auto border-amber-500/30">
       <CardContent className="py-8">
@@ -204,7 +204,7 @@ export function NameLookupResult({
 
   const displayName = ensureSuffix(name);
   const expiryStatus = expires ? getExpiryStatus(expires) : null;
-  
+
   const filteredRecords = textRecords.filter(r => r.value && r.value.trim() !== "");
 
   return (
@@ -223,8 +223,8 @@ export function NameLookupResult({
                 expiryStatus === "active"
                   ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/20"
                   : expiryStatus === "expiring-soon"
-                  ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
-                  : "bg-red-500/10 text-red-600 border-red-500/20"
+                    ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                    : "bg-red-500/10 text-red-600 border-red-500/20"
               }
             >
               {expiryStatus === "active" ? "Active" : expiryStatus === "expiring-soon" ? "Expiring Soon" : "Expired"}
@@ -232,7 +232,7 @@ export function NameLookupResult({
           )}
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Owner */}
         {owner && (
@@ -356,7 +356,7 @@ function NoReverseRecord({ address }: { address: string }) {
               If you own this address, you can set a primary name in your domain settings.
             </p>
           </div>
-          <Link href="/my-domains">
+          <Link href="/domains">
             <Button className="bg-[#0db0a4] hover:bg-[#0a9389]">
               Manage My Domains
             </Button>
@@ -398,7 +398,7 @@ export function AddressLookupResult({
           </CardTitle>
         </div>
       </CardHeader>
-      
+
       <CardContent className="space-y-6">
         {/* Address with Identicon */}
         <div className="space-y-2">
@@ -436,7 +436,7 @@ export function AddressLookupResult({
               {ownedDomains.map((domain) => {
                 const displayDomain = ensureSuffix(domain);
                 const isPrimary = displayPrimaryName === displayDomain;
-                
+
                 return (
                   <Link
                     key={domain}

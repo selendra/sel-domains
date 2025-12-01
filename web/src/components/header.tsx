@@ -29,7 +29,7 @@ export function Header() {
             Lookup
           </Link>
           <Link
-            href="/my-domains"
+            href="/domains"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
           >
             Domains

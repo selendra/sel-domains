@@ -5,7 +5,7 @@ import { Separator } from "@/components/ui/separator";
 const footerLinks = {
   product: [
     { label: "Search Domains", href: "/lookup" },
-    { label: "My Domains", href: "/my-domains" },
+    { label: "My Domains", href: "/domains" },
     { label: "Documentation", href: "https://selendra.org/docs" },
   ],
   network: [
