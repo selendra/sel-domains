@@ -1044,8 +1044,16 @@ export function RegistrationFlow({ name, years: initialYears }: RegistrationFlow
     if (registrationStep === "complete") return "success";
     if (registrationStep === "error") return "error";
     if (registrationStep === "registering") return "register";
-    if (registrationStep === "waiting") return "wait";
     if (registrationStep === "committing") return "commit";
+
+    // For waiting state, check if local state has advanced to register
+    // (happens when countdown reaches 0)
+    if (registrationStep === "waiting") {
+      // If local state has moved to "register", use that
+      if (flowStep === "register") return "register";
+      return "wait";
+    }
+
     // Otherwise use local state
     return flowStep;
   }, [registrationStep, flowStep]);

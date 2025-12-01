@@ -8,7 +8,7 @@
     "PublicResolver": "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a",
     "BaseRegistrar": "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6",
     "PriceOracle": "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890",
-    "SELRegistrarController": "0x76B2F67AE09E2956967DF4303d9e914791B323dC",
+    "SELRegistrarController": "0xC202368044C4e633B5585D3e9498E421b5955D8E",
     "ReverseRegistrar": "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E"
   },
   "nodes": {

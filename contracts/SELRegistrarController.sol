@@ -20,7 +20,7 @@ contract SELRegistrarController {
     mapping(bytes32 => uint256) public commitments;
 
     // Minimum and maximum commitment age (prevents front-running)
-    uint256 public constant MIN_COMMITMENT_AGE = 60; // 1 minute
+    uint256 public constant MIN_COMMITMENT_AGE = 10; // 10 seconds (Selendra has 1s blocks)
     uint256 public constant MAX_COMMITMENT_AGE = 86400; // 24 hours
 
     // Minimum registration duration

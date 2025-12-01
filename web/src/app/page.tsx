@@ -3,7 +3,6 @@ import { HeroSearch } from "@/components/hero-search";
 import { Features } from "@/components/features";
 import { HowItWorks } from "@/components/how-it-works";
 import { Pricing } from "@/components/pricing";
-import { FAQ } from "@/components/faq";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
@@ -12,10 +11,9 @@ export default function Home() {
       <Header />
       <main>
         <HeroSearch />
-        <Features />
         <HowItWorks />
+        <Features />
         <Pricing />
-        <FAQ />
       </main>
       <Footer />
     </div>

@@ -10,9 +10,9 @@ import {
 } from "@/components/ui/select";
 
 const basePrices = {
-  "3": 500, // 3 characters
-  "4": 100, // 4 characters
-  "5+": 5, // 5+ characters
+  "3": 1000, // 3 characters
+  "4": 250,  // 4 characters
+  "5+": 50,  // 5+ characters
 };
 
 const yearOptions = [
@@ -117,11 +117,10 @@ export function Pricing() {
           {pricingTiers.map((tier, index) => (
             <div
               key={index}
-              className={`grid grid-cols-4 gap-4 px-6 py-5 ${
-                index !== pricingTiers.length - 1
+              className={`grid grid-cols-4 gap-4 px-6 py-5 ${index !== pricingTiers.length - 1
                   ? "border-b border-gray-100"
                   : ""
-              }`}
+                }`}
             >
               <span className="font-semibold text-gray-900">{tier.length}</span>
               <span className="font-mono text-gray-600">{tier.example}</span>

@@ -59,7 +59,7 @@ export const testnetAddresses = {
   BaseRegistrar: "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6" as `0x${string}`,
   PriceOracle: "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890" as `0x${string}`,
   SELRegistrarController:
-    "0x76B2F67AE09E2956967DF4303d9e914791B323dC" as `0x${string}`,
+    "0xC202368044C4e633B5585D3e9498E421b5955D8E" as `0x${string}`,
   ReverseRegistrar:
     "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E" as `0x${string}`,
 } as const;
@@ -93,5 +93,5 @@ export const GRACE_PERIOD = 90n * 24n * 60n * 60n;
 export const MIN_REGISTRATION_DURATION = 365n * 24n * 60n * 60n;
 
 // Commitment timing
-export const MIN_COMMITMENT_AGE = 60n; // 1 minute
+export const MIN_COMMITMENT_AGE = 10n; // 10 seconds (Selendra has 1s blocks)
 export const MAX_COMMITMENT_AGE = 86400n; // 24 hours

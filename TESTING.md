@@ -90,7 +90,7 @@ Visit the faucet: https://faucet.selendra.org
 3. If you refresh, it will resume from where you left off
 
 ### Step 5: Complete Registration
-1. After 60 seconds, click "Complete Registration"
+1. After 10 seconds, click "Complete Registration"
 2. **Sign the register transaction** in your wallet
 3. This transaction requires payment (SEL)
 4. Wait for confirmation
@@ -182,7 +182,7 @@ localStorage.removeItem('sns_registration_state')
 | PublicResolver | `0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a` |
 | BaseRegistrar | `0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6` |
 | PriceOracle | `0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890` |
-| SELRegistrarController | `0x76B2F67AE09E2956967DF4303d9e914791B323dC` |
+| SELRegistrarController | `0xC202368044C4e633B5585D3e9498E421b5955D8E` |
 | ReverseRegistrar | `0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E` |
 
 ---
@@ -192,7 +192,7 @@ localStorage.removeItem('sns_registration_state')
 ### Check commitment on-chain
 ```bash
 # Check if a commitment exists (returns timestamp, 0 if not found)
-cast call 0x76B2F67AE09E2956967DF4303d9e914791B323dC \
+cast call 0xC202368044C4e633B5585D3e9498E421b5955D8E \
   "commitments(bytes32)(uint256)" \
   <COMMITMENT_HASH> \
   --rpc-url https://rpc-testnet.selendra.org
@@ -200,7 +200,7 @@ cast call 0x76B2F67AE09E2956967DF4303d9e914791B323dC \
 
 ### Check domain availability
 ```bash
-cast call 0x76B2F67AE09E2956967DF4303d9e914791B323dC \
+cast call 0xC202368044C4e633B5585D3e9498E421b5955D8E \
   "available(string)(bool)" \
   "myname" \
   --rpc-url https://rpc-testnet.selendra.org
@@ -209,7 +209,7 @@ cast call 0x76B2F67AE09E2956967DF4303d9e914791B323dC \
 ### Check domain price
 ```bash
 # Price for 1 year (31536000 seconds)
-cast call 0x76B2F67AE09E2956967DF4303d9e914791B323dC \
+cast call 0xC202368044C4e633B5585D3e9498E421b5955D8E \
   "rentPrice(string,uint256)(uint256,uint256)" \
   "myname" 31536000 \
   --rpc-url https://rpc-testnet.selendra.org

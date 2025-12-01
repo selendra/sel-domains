@@ -129,5 +129,5 @@ export const SEL_NODE = namehash("sel");
  * Constants for common operations
  */
 export const SECONDS_PER_YEAR = BigInt(31536000);
-export const MIN_COMMITMENT_AGE = 60; // 1 minute in seconds
+export const MIN_COMMITMENT_AGE = 10; // 10 seconds (Selendra has 1s blocks)
 export const MAX_COMMITMENT_AGE = 86400; // 24 hours in seconds

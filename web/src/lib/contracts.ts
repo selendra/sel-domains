@@ -22,7 +22,7 @@ const getAddress = (envVar: string, fallback: string): `0x${string}` => {
 // Default addresses (testnet - chain 1953, deployed 2025-01-24)
 const TESTNET_DEFAULTS = {
   SNSRegistry: "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a",
-  SELRegistrarController: "0x76B2F67AE09E2956967DF4303d9e914791B323dC",
+  SELRegistrarController: "0xC202368044C4e633B5585D3e9498E421b5955D8E",
   PublicResolver: "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a",
   PriceOracle: "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890",
   ReverseRegistrar: "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E",

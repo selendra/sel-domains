@@ -32,28 +32,10 @@ export function Header() {
             href="/my-domains"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
           >
-            My Domains
+            Domains
           </Link>
           <Link
-            href="#features"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
-          >
-            Features
-          </Link>
-          <Link
-            href="#pricing"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
-          >
-            Pricing
-          </Link>
-          <Link
-            href="#faq"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
-          >
-            FAQ
-          </Link>
-          <Link
-            href="https://docs.selendra.org"
+            href="https://selendra.org/docs"
             target="_blank"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-[#0a9389]"
           >

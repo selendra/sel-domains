@@ -39,6 +39,7 @@ export function useSetAddress() {
         abi: PublicResolverABI,
         functionName: "setAddr",
         args: [node, address],
+        type: "legacy" as const,
       });
     },
     [writeContract]
@@ -79,6 +80,7 @@ export function useSetTextRecord() {
         abi: PublicResolverABI,
         functionName: "setText",
         args: [node, key, value],
+        type: "legacy" as const,
       });
     },
     [writeContract]
@@ -135,6 +137,7 @@ export function useTransferDomain() {
         ],
         functionName: "safeTransferFrom",
         args: [from, to, tokenId],
+        type: "legacy" as const,
       });
     },
     [writeContract]

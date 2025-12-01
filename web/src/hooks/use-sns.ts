@@ -566,6 +566,36 @@ export function useOwnedDomains(ownerAddress: string) {
     setError(null);
 
     try {
+      // First, get all NameRegistered events to build tokenId -> name mapping
+      const nameRegisteredLogs = await publicClient.getLogs({
+        address: CONTRACT_ADDRESSES.SELRegistrarController,
+        event: {
+          type: "event",
+          name: "NameRegistered",
+          inputs: [
+            { name: "name", type: "string", indexed: false },
+            { name: "label", type: "bytes32", indexed: true },
+            { name: "owner", type: "address", indexed: true },
+            { name: "cost", type: "uint256", indexed: false },
+            { name: "expires", type: "uint256", indexed: false },
+          ],
+        },
+        fromBlock: "earliest",
+        toBlock: "latest",
+      });
+
+      // Build a map from labelhash (tokenId as hex) to name
+      const labelToName = new Map<string, string>();
+      for (const log of nameRegisteredLogs) {
+        const label = log.args.label as `0x${string}`;
+        const name = log.args.name as string;
+        if (label && name) {
+          // Convert label (bytes32) to tokenId string for comparison
+          const tokenId = BigInt(label).toString();
+          labelToName.set(tokenId, name);
+        }
+      }
+
       // Get Transfer events to the owner address from BaseRegistrar
       const transferLogs = await publicClient.getLogs({
         address: CONTRACT_ADDRESSES.BaseRegistrar,
@@ -640,8 +670,11 @@ export function useOwnedDomains(ownerAddress: string) {
           // Token ID is the labelhash
           const labelHashHex = toHex(tokenId, { size: 32 });
 
+          // Look up the actual name from the NameRegistered events
+          const actualName = labelToName.get(tokenId.toString());
+
           domainInfos.push({
-            name: `${tokenId.toString()}.sel`, // TODO: Reverse lookup actual name
+            name: actualName ? `${actualName}.sel` : `unknown-${tokenId.toString().slice(0, 8)}.sel`,
             labelhash: labelHashHex,
             owner: ownerAddress as Address,
             expires: expires as bigint,
