@@ -22,6 +22,7 @@ import {
   ReverseRegistrarABI,
   BaseRegistrarABI,
   SNSRegistryABI,
+  DEPLOYMENT_BLOCK,
 } from "@/lib/contracts";
 import {
   namehash,
@@ -546,8 +547,10 @@ export function useReverseResolve(address: string) {
 
 /**
  * Get domains owned by an address
- * Note: This uses events to find owned domains. For production,
- * consider using a subgraph for better performance.
+ * Optimized version that:
+ * 1. Uses deployment block to avoid scanning from genesis
+ * 2. Fetches logs in parallel
+ * 3. Batches contract reads with Promise.all
  */
 export function useOwnedDomains(ownerAddress: string) {
   const [domains, setDomains] = useState<DomainInfo[]>([]);
@@ -566,76 +569,54 @@ export function useOwnedDomains(ownerAddress: string) {
     setError(null);
 
     try {
-      // Get NameRegistered events from the current controller only
-      const nameRegisteredLogs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESSES.SELRegistrarController,
-        event: {
-          type: "event",
-          name: "NameRegistered",
-          inputs: [
-            { name: "name", type: "string", indexed: false },
-            { name: "label", type: "bytes32", indexed: true },
-            { name: "owner", type: "address", indexed: true },
-            { name: "cost", type: "uint256", indexed: false },
-            { name: "expires", type: "uint256", indexed: false },
-          ],
-        },
-        fromBlock: "earliest",
-        toBlock: "latest",
-      });
+      // Fetch NameRegistered and Transfer logs in parallel
+      // Use deployment block to avoid scanning from genesis
+      const [nameRegisteredLogs, allTransferLogs] = await Promise.all([
+        publicClient.getLogs({
+          address: CONTRACT_ADDRESSES.SELRegistrarController,
+          event: {
+            type: "event",
+            name: "NameRegistered",
+            inputs: [
+              { name: "name", type: "string", indexed: false },
+              { name: "label", type: "bytes32", indexed: true },
+              { name: "owner", type: "address", indexed: true },
+              { name: "cost", type: "uint256", indexed: false },
+              { name: "expires", type: "uint256", indexed: false },
+            ],
+          },
+          fromBlock: DEPLOYMENT_BLOCK,
+          toBlock: "latest",
+        }),
+        publicClient.getLogs({
+          address: CONTRACT_ADDRESSES.BaseRegistrar,
+          event: {
+            type: "event",
+            name: "Transfer",
+            inputs: [
+              { name: "from", type: "address", indexed: true },
+              { name: "to", type: "address", indexed: true },
+              { name: "tokenId", type: "uint256", indexed: true },
+            ],
+          },
+          fromBlock: DEPLOYMENT_BLOCK,
+          toBlock: "latest",
+        }),
+      ]);
 
-      // Build a map from labelhash (tokenId as hex) to name
+      // Build a map from labelhash (tokenId) to name
       const labelToName = new Map<string, string>();
       for (const log of nameRegisteredLogs) {
         const label = log.args.label as `0x${string}`;
         const name = log.args.name as string;
         if (label && name) {
-          // Convert label (bytes32) to tokenId string for comparison
           const tokenId = BigInt(label).toString();
           labelToName.set(tokenId, name);
         }
       }
 
-      // Get Transfer events to the owner address from BaseRegistrar
-      const transferLogs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESSES.BaseRegistrar,
-        event: {
-          type: "event",
-          name: "Transfer",
-          inputs: [
-            { name: "from", type: "address", indexed: true },
-            { name: "to", type: "address", indexed: true },
-            { name: "tokenId", type: "uint256", indexed: true },
-          ],
-        },
-        args: {
-          to: ownerAddress as Address,
-        },
-        fromBlock: "earliest",
-        toBlock: "latest",
-      });
-
-      // Get unique token IDs owned by the address
-      const tokenIds = new Set<bigint>();
+      // Track the last transfer for each token to find current owner
       const tokenIdToLastTransfer = new Map<string, Address>();
-
-      // Track all transfers to determine current owner
-      const allTransferLogs = await publicClient.getLogs({
-        address: CONTRACT_ADDRESSES.BaseRegistrar,
-        event: {
-          type: "event",
-          name: "Transfer",
-          inputs: [
-            { name: "from", type: "address", indexed: true },
-            { name: "to", type: "address", indexed: true },
-            { name: "tokenId", type: "uint256", indexed: true },
-          ],
-        },
-        fromBlock: "earliest",
-        toBlock: "latest",
-      });
-
-      // Track the last transfer for each token
       for (const log of allTransferLogs) {
         const tokenId = log.args.tokenId?.toString();
         if (tokenId) {
@@ -643,49 +624,49 @@ export function useOwnedDomains(ownerAddress: string) {
         }
       }
 
-      // Filter to only tokens currently owned by the address
-      for (const log of transferLogs) {
-        const tokenId = log.args.tokenId;
-        if (tokenId) {
-          const currentOwner = tokenIdToLastTransfer.get(tokenId.toString());
-          if (currentOwner?.toLowerCase() === ownerAddress.toLowerCase()) {
-            tokenIds.add(tokenId);
+      // Find tokens currently owned by the address
+      const ownedTokenIds: bigint[] = [];
+      for (const [tokenIdStr, currentOwner] of tokenIdToLastTransfer) {
+        if (currentOwner?.toLowerCase() === ownerAddress.toLowerCase()) {
+          // Only include if we have a name for it (registered via current controller)
+          if (labelToName.has(tokenIdStr)) {
+            ownedTokenIds.push(BigInt(tokenIdStr));
           }
         }
       }
 
-      // Get domain info for each token
+      // If no domains found, return early
+      if (ownedTokenIds.length === 0) {
+        setDomains([]);
+        return;
+      }
+
+      // Batch fetch all expirations in parallel
+      const expirationPromises = ownedTokenIds.map((tokenId) =>
+        publicClient.readContract({
+          address: CONTRACT_ADDRESSES.BaseRegistrar,
+          abi: BaseRegistrarABI,
+          functionName: "nameExpires",
+          args: [tokenId],
+        }).catch(() => null) // Return null on error
+      );
+
+      const expirations = await Promise.all(expirationPromises);
+
+      // Build domain info array
       const domainInfos: DomainInfo[] = [];
+      for (let i = 0; i < ownedTokenIds.length; i++) {
+        const tokenId = ownedTokenIds[i];
+        const expires = expirations[i];
+        const actualName = labelToName.get(tokenId.toString());
 
-      for (const tokenId of tokenIds) {
-        try {
-          // Get expiration
-          const expires = await publicClient.readContract({
-            address: CONTRACT_ADDRESSES.BaseRegistrar,
-            abi: BaseRegistrarABI,
-            functionName: "nameExpires",
-            args: [tokenId],
+        if (actualName && expires !== null) {
+          domainInfos.push({
+            name: `${actualName}.sel`,
+            labelhash: toHex(tokenId, { size: 32 }),
+            owner: ownerAddress as Address,
+            expires: expires as bigint,
           });
-
-          // Token ID is the labelhash
-          const labelHashHex = toHex(tokenId, { size: 32 });
-
-          // Look up the actual name from the NameRegistered events
-          const actualName = labelToName.get(tokenId.toString());
-
-          // Only include domains registered with the current controller
-          // (skip domains from old controller that show as "unknown")
-          if (actualName) {
-            domainInfos.push({
-              name: `${actualName}.sel`,
-              labelhash: labelHashHex,
-              owner: ownerAddress as Address,
-              expires: expires as bigint,
-            });
-          }
-        } catch {
-          // Skip tokens that fail to load
-          console.warn(`Failed to load domain info for token ${tokenId}`);
         }
       }
 

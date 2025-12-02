@@ -2,10 +2,11 @@
   "network": "selendra_testnet",
   "chainId": 1953,
   "deployer": "0xeC63B36363C4Dc5c3df20c4e46C261C10C4A3DD9",
-  "timestamp": "2025-01-24",
+  "timestamp": "2025-12-02",
   "contracts": {
     "SNSRegistry": "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a",
     "PublicResolver": "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a",
+    "MultiChainResolver": "0x39f8bB3627d84092572304Ed01f1532855775207",
     "BaseRegistrar": "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6",
     "PriceOracle": "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890",
     "SELRegistrarController": "0xC202368044C4e633B5585D3e9498E421b5955D8E",

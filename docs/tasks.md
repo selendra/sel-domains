@@ -213,13 +213,42 @@ Reserve system names before public launch:
 
 - [ ] Set up npm publishing
 - [ ] Create package documentation
-- [ ] Publish `@selendra/sns-sdk`
+- [ ] Publish `@selendrajs/sns`
 
 ### Documentation
 
 - [ ] SDK usage examples
 - [ ] API reference
 - [ ] Integration guides
+
+---
+
+## Phase 8: MetaMask Snaps Integration ✅
+
+### SNS Name Resolution Snap ✅
+
+MetaMask Snap for `.sel` domain resolution in MetaMask wallet.
+
+- [x] Create Snap project structure (`snap/`)
+- [x] Implement `onNameLookup` handler
+- [x] Forward resolution: domain → address
+- [x] Reverse resolution: address → domain
+- [x] Support Selendra Mainnet (1961) & Testnet (1953)
+- [x] Build and test locally (5/5 tests passing)
+- [x] Configure npm package (`@selendra/sns-snap`)
+- [x] Create publish script and documentation
+- [ ] Publish to npm (requires `npm login` + `./publish.sh`)
+- [ ] Submit to MetaMask Snaps Directory (after npm publish)
+
+### Future Snaps (Planned) ⏳
+
+| Snap | Purpose | Priority |
+|------|---------|----------|
+| **Transaction Insights** | Show gas in SEL/USD, contract verification, scam warnings | High |
+| **Signature Insights** | Decode typed data, warn about dangerous approvals | High |
+| **Notifications** | Domain expiry reminders, incoming tx alerts | Medium |
+| **Portfolio/Home Page** | SEL balance, NFTs, DeFi positions on MetaMask home | Medium |
+| **Staking Insights** | Validator info, APY, unbonding warnings | Low |
 
 ---
 
@@ -406,20 +435,35 @@ Move from EVM to native Substrate pallet:
 ### High Priority
 
 - [x] Fix BaseRegistrar.registerWithConfig() - now uses setSubnodeRecord for atomic operation
-- [ ] Add comprehensive error messages
-- [ ] Gas optimization pass
+- [x] Add comprehensive error messages (custom errors in all contracts)
+- [x] Gas optimization pass (unchecked loop increments, cached array lengths)
 
 ### Medium Priority
 
-- [ ] Add events for all state changes
-- [ ] Improve natspec documentation
-- [ ] Add multicall support
+- [x] Add events for all state changes (CommitmentConsumed, WithdrawalCompleted, NameReclaimed)
+- [x] Improve natspec documentation (all contracts documented)
+- [x] Add multicall support (SELRegistrarController, BaseRegistrar, PublicResolver, ReverseRegistrar)
 
 ### Low Priority
 
-- [ ] Consider upgradeable contracts
-- [ ] Add batch operations
-- [ ] Implement EIP-2544 (wildcard resolution)
+- [x] Consider upgradeable contracts (evaluated - not recommended for v1 due to complexity and trust requirements)
+- [x] Add batch operations (batchAvailable, batchRentPrice, batchRenew, batchCommit)
+- [x] Implement EIP-2544 (wildcard resolution with resolve() function and DNS name decoding)
+
+### Custom Errors Implementation ✅
+
+All contracts now use gas-efficient custom errors (~50 gas savings per error):
+
+| Contract | Errors Implemented |
+|----------|-------------------|
+| SNSRegistry | `SNS_NotAuthorized` |
+| BaseRegistrar | `SNS_NameNotAvailableById`, `SNS_NameExpired`, `SNS_NotController`, `SNS_DurationOverflow`, `SNS_NotApprovedOrOwner` |
+| SELRegistrarController | `SNS_CommitmentExists`, `SNS_CommitmentNotFound`, `SNS_CommitmentTooNew`, `SNS_CommitmentExpired`, `SNS_NameNotAvailable`, `SNS_InsufficientPayment`, `SNS_RefundFailed`, `SNS_NameNotReserved`, `SNS_InvalidName`, `SNS_InvalidOracle`, `SNS_MulticallFailed` |
+| PublicResolver | `SNS_NotAuthorized`, `SNS_MulticallFailed`, `SNS_InvalidAddressLength` |
+| PriceOracle | `SNS_NameTooShort`, `SNS_DiscountTooHigh`, `SNS_ArrayLengthMismatch` |
+| ReverseRegistrar | `SNS_CannotClaimReverse` |
+
+All custom errors are defined in `src/interfaces/ISNSErrors.sol`.
 
 ---
 
@@ -446,5 +490,6 @@ Move from EVM to native Substrate pallet:
 | Phase 5: Web App            | Complete | ✅       |
 | Phase 6: Mainnet Launch     | 1 week   | Jan 2026 |
 | Phase 7: SDK Distribution   | 3 days   | Jan 2026 |
+| Phase 8: MetaMask Snaps     | 2 weeks  | Jan 2026 |
 
 **Target Mainnet Launch: Q1 2026**

@@ -9,6 +9,7 @@ import {
     SimplePriceOracle,
     IPriceOracle
 } from "../src/SELRegistrarController.sol";
+import "../src/interfaces/ISNSErrors.sol";
 
 contract SELRegistrarControllerTest is Test {
     SNSRegistry public registry;
@@ -153,7 +154,7 @@ contract SELRegistrarControllerTest is Test {
 
         controller.commit(commitment);
 
-        vm.expectRevert("Commitment already exists");
+        vm.expectRevert(abi.encodeWithSelector(SNS_CommitmentExists.selector, commitment));
         controller.commit(commitment);
     }
 
@@ -169,8 +170,18 @@ contract SELRegistrarControllerTest is Test {
     function test_Register_RevertIfNoCommitment() public {
         (uint256 price, ) = controller.rentPrice("alice", DURATION);
 
+        bytes32 expectedCommitment = controller.makeCommitment(
+            "alice",
+            alice,
+            DURATION,
+            SECRET,
+            address(0),
+            new bytes[](0),
+            false
+        );
+
         vm.prank(alice);
-        vm.expectRevert("No commitment found");
+        vm.expectRevert(abi.encodeWithSelector(SNS_CommitmentNotFound.selector, expectedCommitment));
         controller.register{value: price}(
             "alice",
             alice,
@@ -194,12 +205,13 @@ contract SELRegistrarControllerTest is Test {
         );
 
         controller.commit(commitment);
+        uint256 commitTime = block.timestamp;
 
         // Try to register immediately (before MIN_COMMITMENT_AGE)
         (uint256 price, ) = controller.rentPrice("alice", DURATION);
 
         vm.prank(alice);
-        vm.expectRevert("Commitment too new");
+        vm.expectRevert(abi.encodeWithSelector(SNS_CommitmentTooNew.selector, commitment, commitTime, 10));
         controller.register{value: price}(
             "alice",
             alice,
@@ -223,14 +235,15 @@ contract SELRegistrarControllerTest is Test {
         );
 
         controller.commit(commitment);
+        uint256 commitTime = controller.commitments(commitment);
 
         // Fast forward past MAX_COMMITMENT_AGE
-        vm.warp(block.timestamp + 25 hours);
+        vm.warp(commitTime + 25 hours);
 
         (uint256 price, ) = controller.rentPrice("alice", DURATION);
 
         vm.prank(alice);
-        vm.expectRevert("Commitment expired");
+        vm.expectRevert(abi.encodeWithSelector(SNS_CommitmentExpired.selector, commitment, commitTime, 86400));
         controller.register{value: price}(
             "alice",
             alice,
@@ -256,8 +269,10 @@ contract SELRegistrarControllerTest is Test {
         controller.commit(commitment);
         vm.warp(block.timestamp + 61); // Past MIN_COMMITMENT_AGE
 
+        (uint256 price, ) = controller.rentPrice("alice", DURATION);
+
         vm.prank(alice);
-        vm.expectRevert("Insufficient payment");
+        vm.expectRevert(abi.encodeWithSelector(SNS_InsufficientPayment.selector, 1 ether, price));
         controller.register{value: 1 ether}(
             "alice",
             alice,
@@ -322,7 +337,7 @@ contract SELRegistrarControllerTest is Test {
         (uint256 price, ) = controller.rentPrice("alice", DURATION);
 
         vm.prank(alice);
-        vm.expectRevert("Name not registered");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NameNotAvailable.selector, "alice"));
         controller.renew{value: price}("alice", DURATION);
     }
 
@@ -403,7 +418,7 @@ contract SELRegistrarControllerTest is Test {
     }
 
     function test_RegisterReserved_RevertIfNotReserved() public {
-        vm.expectRevert("Name not reserved");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NameNotReserved.selector, "alice"));
         controller.registerReserved("alice", alice, DURATION, address(0));
     }
 
@@ -440,7 +455,7 @@ contract SELRegistrarControllerTest is Test {
     }
 
     function test_SetPriceOracle_RevertIfZeroAddress() public {
-        vm.expectRevert("Invalid oracle");
+        vm.expectRevert(SNS_InvalidOracle.selector);
         controller.setPriceOracle(IPriceOracle(address(0)));
     }
 

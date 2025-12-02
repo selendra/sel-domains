@@ -6,6 +6,8 @@ import { useConnect } from "wagmi";
 import Link from "next/link";
 import { Header } from "@/components/header";
 import { RecordEditor } from "@/components/record-editor";
+import { MultiChainAddresses } from "@/components/multichain-addresses";
+import { ResolverUpgrade } from "@/components/resolver-upgrade";
 import { TransferDomain } from "@/components/transfer-domain";
 import { RenewDomain } from "@/components/renew-domain";
 import { Button } from "@/components/ui/button";
@@ -322,6 +324,13 @@ function DomainDetails({ name }: DomainDetailsProps) {
         </CardContent>
       </Card>
 
+      {/* Resolver Upgrade Warning */}
+      <ResolverUpgrade
+        name={name}
+        currentResolver={resolver}
+        isOwner={isOwner}
+      />
+
       {/* Records Section */}
       <div className="space-y-4">
         <h2 className="text-xl font-semibold flex items-center gap-2">
@@ -329,6 +338,7 @@ function DomainDetails({ name }: DomainDetailsProps) {
           Records
         </h2>
         <RecordEditor name={name} isOwner={isOwner} />
+        <MultiChainAddresses name={name} isOwner={isOwner} />
       </div>
 
       {/* Owner Actions */}

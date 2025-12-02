@@ -109,6 +109,15 @@ sel-domains/
 ├── web/                     # Next.js frontend
 │   └── ...
 │
+├── snap/                    # MetaMask Snap
+│   ├── src/
+│   │   ├── index.ts        # onNameLookup handler
+│   │   └── index.test.ts   # Jest tests
+│   ├── snap.manifest.json  # Snap permissions
+│   ├── snap.config.ts      # Build config
+│   ├── package.json
+│   └── README.md
+│
 ├── foundry.toml             # Foundry config
 ├── remappings.txt           # Import remappings
 ├── package.json             # Root package.json
@@ -533,8 +542,105 @@ npm run lint
 
 ---
 
+## MetaMask Snap Development
+
+### Snap Architecture
+
+The SNS Snap implements custom name resolution for MetaMask:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    MetaMask Extension                        │
+├─────────────────────────────────────────────────────────────┤
+│  User types "alice.sel" in send field                       │
+│           ↓                                                  │
+│  MetaMask detects .sel TLD                                  │
+│           ↓                                                  │
+│  Routes to SNS Snap (onNameLookup)                          │
+│           ↓                                                  │
+│  ┌─────────────────────────────────────────────────────┐    │
+│  │              SNS Snap (snap/)                        │    │
+│  │                                                      │    │
+│  │  1. Compute namehash("alice.sel")                   │    │
+│  │  2. Query SNSRegistry.resolver(node)                │    │
+│  │  3. Query Resolver.addr(node)                       │    │
+│  │  4. Return resolved address                         │    │
+│  └─────────────────────────────────────────────────────┘    │
+│           ↓                                                  │
+│  Display: "alice.sel → 0x742d35..."                         │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Snap Manifest
+
+```json
+{
+  "initialPermissions": {
+    "endowment:name-lookup": {
+      "chains": ["eip155:1961", "eip155:1953"],
+      "matchers": { "tlds": ["sel"] }
+    },
+    "endowment:network-access": {}
+  }
+}
+```
+
+### Key Entry Point
+
+```typescript
+// snap/src/index.ts
+import type { OnNameLookupHandler } from "@metamask/snaps-sdk";
+
+export const onNameLookup: OnNameLookupHandler = async (request) => {
+  const { chainId, domain } = request;
+  
+  if (domain?.endsWith(".sel")) {
+    const address = await resolveDomain(domain, chainId);
+    if (address) {
+      return {
+        resolvedAddresses: [{
+          resolvedAddress: address,
+          protocol: "Selendra Naming Service",
+          domainName: domain,
+        }],
+      };
+    }
+  }
+  return null;
+};
+```
+
+### Snap Commands
+
+```bash
+cd snap
+
+# Install dependencies
+yarn install
+
+# Build
+yarn build
+
+# Start dev server (for MetaMask Flask)
+yarn start
+
+# Test
+yarn test
+```
+
+### Testing with MetaMask Flask
+
+1. Install [MetaMask Flask](https://metamask.io/flask/) (developer version)
+2. Run `yarn start` to serve Snap on localhost:8080
+3. In Flask: Settings → Snaps → Install from URL → `http://localhost:8080`
+4. Test by sending to a `.sel` domain
+
+---
+
 ## References
 
 - [Foundry Book](https://book.getfoundry.sh)
 - [Viem Documentation](https://viem.sh)
 - [OpenZeppelin Contracts](https://docs.openzeppelin.com/contracts)
+- [MetaMask Snaps Documentation](https://docs.metamask.io/snaps/)
+- [Snaps Custom Name Resolution](https://docs.metamask.io/snaps/features/custom-name-resolution/)

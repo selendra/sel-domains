@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import {SNSRegistry, ISNSRegistry} from "../src/SNSRegistry.sol";
 import {PublicResolver} from "../src/PublicResolver.sol";
+import "../src/interfaces/ISNSErrors.sol";
 
 contract PublicResolverTest is Test {
     SNSRegistry public registry;
@@ -43,7 +44,7 @@ contract PublicResolverTest is Test {
     }
 
     function test_SetAddr_RevertIfNotAuthorised() public {
-        vm.expectRevert("PublicResolver: Not authorised");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NotAuthorized.selector, aliceNode, address(this)));
         resolver.setAddr(aliceNode, alice);
     }
 

@@ -272,6 +272,30 @@ The commit-reveal scheme prevents miners/validators from:
 
 ## Integration Points
 
+### MetaMask Snaps Integration
+
+MetaMask doesn't natively support ENS on custom networks. We solve this with a **MetaMask Snap** that provides custom name resolution.
+
+**How it works:**
+
+```
+User types "alice.sel" → MetaMask → SNS Snap → Selendra RPC → Address
+```
+
+1. User types `.sel` domain in MetaMask send field
+2. MetaMask routes to SNS Snap via `onNameLookup` handler
+3. Snap computes namehash (EIP-137) and queries SNS Registry
+4. Resolver returns mapped address
+5. MetaMask displays resolved address
+
+**Snap Permissions:**
+- `endowment:name-lookup` - Custom name resolution for `.sel` TLD
+- `endowment:network-access` - RPC calls to Selendra
+
+**Supported Chains:**
+- `eip155:1961` - Selendra Mainnet
+- `eip155:1953` - Selendra Testnet
+
 ### Wallet Integration
 
 ```typescript

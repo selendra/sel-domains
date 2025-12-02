@@ -1,0 +1,35 @@
+{
+    "version": "0.1.0",
+    "description": "Resolve .sel domains on Selendra Network to wallet addresses",
+    "proposedName": "Selendra Naming Service (SNS)",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/selendra/sns-snap.git"
+    },
+    "source": {
+        "shasum": "rznaVT6a8238hj3i3cCkRTpBT8fIk8Rl15dtqL3Ln58=",
+        "location": {
+            "npm": {
+                "filePath": "dist/bundle.js",
+                "packageName": "@selendra/sns-snap",
+                "registry": "https://registry.npmjs.org/"
+            }
+        }
+    },
+    "initialPermissions": {
+        "endowment:name-lookup": {
+            "chains": [
+                "eip155:1961",
+                "eip155:1953"
+            ],
+            "matchers": {
+                "tlds": [
+                    "sel"
+                ]
+            }
+        },
+        "endowment:network-access": {}
+    },
+    "platformVersion": "6.24.0",
+    "manifestVersion": "0.1"
+}

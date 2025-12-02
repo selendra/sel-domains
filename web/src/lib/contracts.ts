@@ -24,7 +24,7 @@ const getAddress = (envVar: string, fallback: string): `0x${string}` => {
 const TESTNET_DEFAULTS = {
   SNSRegistry: "0x03BB6Dd5756774bdcC7D5BF6c5EF6Ea28E21A22a",
   SELRegistrarController: "0xC202368044C4e633B5585D3e9498E421b5955D8E",
-  PublicResolver: "0xFE6c7Ed8FA52FEA2149fd98a60a8e986DBEa0f8a",
+  PublicResolver: "0x39f8bB3627d84092572304Ed01f1532855775207",  // MultiChainResolver
   PriceOracle: "0x81eBB2a59e61D268c47f4F707e7D4f2aAfd9b890",
   ReverseRegistrar: "0xB708898adFeAC80aA1F9cD1Da2B3113d7f5B825E",
   BaseRegistrar: "0xbF0AF7D1b5a6F17A9C6448375B0f1c4788a27Ff6",
@@ -59,6 +59,10 @@ export const NETWORK_INFO = {
   chainId: isMainnet ? 1961 : 1953,
   name: isMainnet ? "Selendra Mainnet" : "Selendra Testnet",
 } as const;
+
+// Block number when contracts were deployed (for efficient log queries)
+// This avoids scanning from genesis block
+export const DEPLOYMENT_BLOCK = isMainnet ? 0n : 37000n; // Testnet deployment block ~37223
 
 // ============ SNS Registry ABI ============
 export const SNSRegistryABI = [
@@ -256,9 +260,121 @@ export const SELRegistrarControllerABI = [
   },
 ] as const;
 
-// ============ Public Resolver ABI ============
+// ============ SLIP-44 Coin Types for Multichain Support ============
+export const COIN_TYPES = {
+  // Major chains
+  BTC: 0,        // Bitcoin
+  LTC: 2,        // Litecoin
+  DOGE: 3,       // Dogecoin
+  ETH: 60,       // Ethereum/EVM (used for Selendra)
+  ETC: 61,       // Ethereum Classic
+  ATOM: 118,     // Cosmos
+  XMR: 128,      // Monero
+  ZEC: 133,      // Zcash
+  XRP: 144,      // Ripple
+  BCH: 145,      // Bitcoin Cash
+  XLM: 148,      // Stellar
+  EOS: 194,      // EOS
+  TRX: 195,      // Tron
+  ICP: 223,      // Internet Computer
+  ALGO: 283,     // Algorand
+  ZIL: 313,      // Zilliqa
+  DOT: 354,      // Polkadot
+  NEAR: 397,     // NEAR Protocol
+  KSM: 434,      // Kusama
+  FIL: 461,      // Filecoin
+  AR: 472,       // Arweave
+  ROSE: 474,     // Oasis
+  THETA: 500,    // Theta
+  SOL: 501,      // Solana
+  CFX: 503,      // Conflux
+  EGLD: 508,     // MultiversX
+  FLOW: 539,     // Flow
+  TON: 607,      // TON
+  APT: 637,      // Aptos
+  BNB: 714,      // Binance Chain
+  SUI: 784,      // Sui
+  VET: 818,      // VeChain
+  NEO: 888,      // NEO
+  MATIC: 966,    // Polygon
+  FTM: 1007,     // Fantom
+  ONE: 1023,     // Harmony
+  GLMR: 1284,    // Moonbeam
+  MOVR: 1285,    // Moonriver
+  XTZ: 1729,     // Tezos
+  ADA: 1815,     // Cardano
+  HBAR: 3030,    // Hedera
+  HNS: 5353,     // Handshake
+  STX: 5757,     // Stacks
+  KLAY: 8217,    // Klaytn/Kaia
+  AVAX: 9000,    // Avalanche
+  ARB: 9001,     // Arbitrum
+  CELO: 52752,   // Celo
+  OSMO: 10000118, // Osmosis
+  SEI: 19000118,  // Sei
+  INJ: 22000119,  // Injective
+} as const;
+
+// Coin type metadata for UI
+export const COIN_TYPE_INFO: Record<number, { symbol: string; name: string; icon: string }> = {
+  [COIN_TYPES.BTC]: { symbol: "BTC", name: "Bitcoin", icon: "₿" },
+  [COIN_TYPES.ETH]: { symbol: "ETH", name: "Ethereum", icon: "Ξ" },
+  [COIN_TYPES.SOL]: { symbol: "SOL", name: "Solana", icon: "◎" },
+  [COIN_TYPES.BNB]: { symbol: "BNB", name: "BNB Chain", icon: "🔶" },
+  [COIN_TYPES.MATIC]: { symbol: "MATIC", name: "Polygon", icon: "⬡" },
+  [COIN_TYPES.AVAX]: { symbol: "AVAX", name: "Avalanche", icon: "🔺" },
+  [COIN_TYPES.ARB]: { symbol: "ARB", name: "Arbitrum", icon: "🔵" },
+  [COIN_TYPES.DOT]: { symbol: "DOT", name: "Polkadot", icon: "●" },
+  [COIN_TYPES.ADA]: { symbol: "ADA", name: "Cardano", icon: "₳" },
+  [COIN_TYPES.XRP]: { symbol: "XRP", name: "Ripple", icon: "✕" },
+  [COIN_TYPES.DOGE]: { symbol: "DOGE", name: "Dogecoin", icon: "Ð" },
+  [COIN_TYPES.LTC]: { symbol: "LTC", name: "Litecoin", icon: "Ł" },
+  [COIN_TYPES.ATOM]: { symbol: "ATOM", name: "Cosmos", icon: "⚛" },
+  [COIN_TYPES.NEAR]: { symbol: "NEAR", name: "NEAR Protocol", icon: "Ⓝ" },
+  [COIN_TYPES.TRX]: { symbol: "TRX", name: "Tron", icon: "⟁" },
+  [COIN_TYPES.XLM]: { symbol: "XLM", name: "Stellar", icon: "✦" },
+  [COIN_TYPES.FIL]: { symbol: "FIL", name: "Filecoin", icon: "⬡" },
+  [COIN_TYPES.APT]: { symbol: "APT", name: "Aptos", icon: "🔷" },
+  [COIN_TYPES.SUI]: { symbol: "SUI", name: "Sui", icon: "💧" },
+  [COIN_TYPES.TON]: { symbol: "TON", name: "TON", icon: "💎" },
+  [COIN_TYPES.FTM]: { symbol: "FTM", name: "Fantom", icon: "👻" },
+  [COIN_TYPES.GLMR]: { symbol: "GLMR", name: "Moonbeam", icon: "🌙" },
+  [COIN_TYPES.MOVR]: { symbol: "MOVR", name: "Moonriver", icon: "🌊" },
+  [COIN_TYPES.CELO]: { symbol: "CELO", name: "Celo", icon: "🟡" },
+  [COIN_TYPES.ALGO]: { symbol: "ALGO", name: "Algorand", icon: "Ⓐ" },
+  [COIN_TYPES.HBAR]: { symbol: "HBAR", name: "Hedera", icon: "ℏ" },
+  [COIN_TYPES.ETC]: { symbol: "ETC", name: "Ethereum Classic", icon: "⟠" },
+  [COIN_TYPES.BCH]: { symbol: "BCH", name: "Bitcoin Cash", icon: "₿" },
+  [COIN_TYPES.XTZ]: { symbol: "XTZ", name: "Tezos", icon: "ꜩ" },
+  [COIN_TYPES.FLOW]: { symbol: "FLOW", name: "Flow", icon: "🌊" },
+  [COIN_TYPES.KSM]: { symbol: "KSM", name: "Kusama", icon: "🦅" },
+};
+
+// Popular coins for quick selection in UI
+export const POPULAR_COIN_TYPES = [
+  COIN_TYPES.ETH,
+  COIN_TYPES.BTC,
+  COIN_TYPES.SOL,
+  COIN_TYPES.BNB,
+  COIN_TYPES.MATIC,
+  COIN_TYPES.AVAX,
+  COIN_TYPES.ARB,
+  COIN_TYPES.DOT,
+  COIN_TYPES.ADA,
+  COIN_TYPES.XRP,
+  COIN_TYPES.DOGE,
+  COIN_TYPES.LTC,
+  COIN_TYPES.ATOM,
+  COIN_TYPES.NEAR,
+  COIN_TYPES.TRX,
+  COIN_TYPES.TON,
+  COIN_TYPES.APT,
+  COIN_TYPES.SUI,
+];
+
+// ============ Public Resolver ABI (MultiChain) ============
 export const PublicResolverABI = [
-  // Address resolution
+  // Address resolution - EIP-137 (ETH address)
   {
     name: "addr",
     type: "function",
@@ -266,6 +382,7 @@ export const PublicResolverABI = [
     inputs: [{ name: "node", type: "bytes32" }],
     outputs: [{ name: "", type: "address" }],
   },
+  // Address resolution - EIP-2304 (multichain)
   {
     name: "addr",
     type: "function",
@@ -276,6 +393,7 @@ export const PublicResolverABI = [
     ],
     outputs: [{ name: "", type: "bytes" }],
   },
+  // Set ETH address - EIP-137
   {
     name: "setAddr",
     type: "function",
@@ -285,6 +403,29 @@ export const PublicResolverABI = [
       { name: "addr", type: "address" },
     ],
     outputs: [],
+  },
+  // Set multichain address - EIP-2304
+  {
+    name: "setAddr",
+    type: "function",
+    stateMutability: "nonpayable",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "coinType", type: "uint256" },
+      { name: "a", type: "bytes" },
+    ],
+    outputs: [],
+  },
+  // Batch read addresses
+  {
+    name: "getAddresses",
+    type: "function",
+    stateMutability: "view",
+    inputs: [
+      { name: "node", type: "bytes32" },
+      { name: "coinTypes", type: "uint256[]" },
+    ],
+    outputs: [{ name: "addresses", type: "bytes[]" }],
   },
   // Text records
   {

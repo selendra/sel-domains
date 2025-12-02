@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "forge-std/Test.sol";
 import {SNSRegistry, ISNSRegistry} from "../src/SNSRegistry.sol";
+import "../src/interfaces/ISNSErrors.sol";
 
 contract SNSRegistryTest is Test {
     SNSRegistry public registry;
@@ -61,7 +62,7 @@ contract SNSRegistryTest is Test {
 
     function test_SetSubnodeOwner_RevertIfNotAuthorised() public {
         vm.prank(alice);
-        vm.expectRevert("SNS: Not authorised");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NotAuthorized.selector, ROOT_NODE, alice));
         registry.setSubnodeOwner(ROOT_NODE, keccak256("sel"), alice);
     }
 
@@ -92,7 +93,7 @@ contract SNSRegistryTest is Test {
         registry.setSubnodeOwner(ROOT_NODE, keccak256("sel"), owner);
 
         vm.prank(alice);
-        vm.expectRevert("SNS: Not authorised");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NotAuthorized.selector, selNode, alice));
         registry.setOwner(selNode, alice);
     }
 

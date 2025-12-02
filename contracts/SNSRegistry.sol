@@ -3,20 +3,40 @@ pragma solidity ^0.8.20;
 
 /**
  * @title SNS Registry
+ * @author Selendra Team
  * @notice The core registry contract for Selendra Naming Service (.sel domains)
- * @dev Stores ownership and resolver information for all .sel domains
+ * @dev Stores ownership and resolver information for all .sel domains.
+ *      Implements EIP-137 compatible registry interface.
+ * 
+ * Key concepts:
+ * - Node: A bytes32 identifier computed via namehash algorithm (EIP-137)
+ * - Owner: Address that controls a node (can update resolver, transfer ownership)
+ * - Resolver: Contract that stores records for a node (addresses, text, etc.)
+ * - TTL: Time-to-live hint for caching (not enforced on-chain)
+ * - Operator: Address approved to manage all nodes owned by another address
  * 
  * Inspired by ENS (Ethereum Name Service) - adapted for Selendra
  */
 interface ISNSRegistry {
-    // Events
+    // ============ Events ============
+
+    /// @notice Emitted when a new subnode owner is set
     event NewOwner(bytes32 indexed node, bytes32 indexed label, address owner);
+
+    /// @notice Emitted when node ownership is transferred
     event Transfer(bytes32 indexed node, address owner);
+
+    /// @notice Emitted when a node's resolver is updated
     event NewResolver(bytes32 indexed node, address resolver);
+
+    /// @notice Emitted when a node's TTL is updated
     event NewTTL(bytes32 indexed node, uint64 ttl);
+
+    /// @notice Emitted when operator approval is changed
     event ApprovalForAll(address indexed owner, address indexed operator, bool approved);
 
-    // Core functions
+    // ============ Write Functions ============
+
     function setRecord(bytes32 node, address owner, address resolver, uint64 ttl) external;
     function setSubnodeRecord(bytes32 node, bytes32 label, address owner, address resolver, uint64 ttl) external;
     function setSubnodeOwner(bytes32 node, bytes32 label, address owner) external returns (bytes32);
@@ -25,7 +45,8 @@ interface ISNSRegistry {
     function setTTL(bytes32 node, uint64 ttl) external;
     function setApprovalForAll(address operator, bool approved) external;
     
-    // View functions
+    // ============ View Functions ============
+
     function owner(bytes32 node) external view returns (address);
     function resolver(bytes32 node) external view returns (address);
     function ttl(bytes32 node) external view returns (uint64);
@@ -33,8 +54,14 @@ interface ISNSRegistry {
     function isApprovedForAll(address owner, address operator) external view returns (bool);
 }
 
+// ============ Custom Errors ============
+
+/// @notice Caller is not authorized to modify this node
+error SNS_NotAuthorized(bytes32 node, address caller);
+
 /**
  * @title SNS Registry Implementation
+ * @notice Implements the core ENS-compatible registry for .sel domains
  */
 contract SNSRegistry is ISNSRegistry {
     struct Record {
@@ -49,17 +76,23 @@ contract SNSRegistry is ISNSRegistry {
     // The namehash of the root node (0x0)
     bytes32 constant private ROOT_NODE = bytes32(0);
 
+    // ============ Modifiers ============
+
+    /// @notice Ensures caller is authorized to modify the node
     modifier authorised(bytes32 node) {
         address nodeOwner = records[node].owner;
-        require(
-            nodeOwner == msg.sender || operators[nodeOwner][msg.sender],
-            "SNS: Not authorised"
-        );
+        if (nodeOwner != msg.sender && !operators[nodeOwner][msg.sender]) {
+            revert SNS_NotAuthorized(node, msg.sender);
+        }
         _;
     }
 
+    // ============ Constructor ============
+
+    /// @notice Initializes registry with deployer as root owner
     constructor() {
         records[ROOT_NODE].owner = msg.sender;
+        emit Transfer(ROOT_NODE, msg.sender);
     }
 
     /**

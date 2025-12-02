@@ -3,17 +3,25 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "./SNSRegistry.sol";
+import {ISNSRegistry} from "./SNSRegistry.sol";
+import "./interfaces/ISNSErrors.sol";
 
 /**
  * @title SNS Base Registrar
+ * @author Selendra Team
  * @notice ERC-721 NFT implementation for .sel domain ownership
  * @dev Each .sel name is represented as an NFT where tokenId = labelhash(name)
  *
+ * Key features:
+ * - tokenId = keccak256(label), e.g., keccak256("alice") for alice.sel
+ * - NFT ownership corresponds to domain ownership
+ * - 90-day grace period after expiry for renewals
+ * - Transferable and tradeable on NFT marketplaces
+ * - Only authorized controllers can register/renew names
+ *
  * Example:
  * - "alice.sel" → tokenId = keccak256("alice")
- * - NFT ownership = domain ownership
- * - Transferable and tradeable on NFT marketplaces
+ * - NFT transfer automatically updates registry ownership
  */
 contract BaseRegistrar is ERC721, Ownable {
     // The SNS registry
@@ -40,15 +48,23 @@ contract BaseRegistrar is ERC721, Ownable {
         uint256 expires
     );
     event NameRenewed(uint256 indexed id, uint256 expires);
+    event NameReclaimed(uint256 indexed id, address indexed owner);
 
-    // Modifiers
+    // ============ Modifiers ============
+
+    /// @notice Restricts function to authorized controllers
     modifier onlyController() {
-        require(controllers[msg.sender], "Not a controller");
+        if (!controllers[msg.sender]) {
+            revert SNS_NotController(msg.sender);
+        }
         _;
     }
 
+    /// @notice Ensures name is not expired (within grace period is OK)
     modifier live(uint256 id) {
-        require(expiries[id] + GRACE_PERIOD > block.timestamp, "Name expired");
+        if (expiries[id] + GRACE_PERIOD <= block.timestamp) {
+            revert SNS_NameExpired(id, expiries[id]);
+        }
         _;
     }
 
@@ -111,8 +127,9 @@ contract BaseRegistrar is ERC721, Ownable {
 
     /**
      * @notice Register a new name
-     * @param id The token id (labelhash)
-     * @param owner The owner address
+     * @dev Only callable by authorized controllers
+     * @param id The token id (labelhash of the name)
+     * @param owner The address to own the name
      * @param duration The registration duration in seconds
      * @return The expiry timestamp
      */
@@ -121,11 +138,16 @@ contract BaseRegistrar is ERC721, Ownable {
         address owner,
         uint256 duration
     ) external onlyController returns (uint256) {
-        require(available(id), "Name not available");
-        require(
-            block.timestamp + duration + GRACE_PERIOD > block.timestamp,
-            "Duration too long"
-        );
+        if (!available(id)) {
+            revert SNS_NameNotAvailableById(id);
+        }
+        
+        // Check for overflow
+        unchecked {
+            if (block.timestamp + duration + GRACE_PERIOD < block.timestamp) {
+                revert SNS_DurationOverflow(duration);
+            }
+        }
 
         expiries[id] = block.timestamp + duration;
 
@@ -145,11 +167,12 @@ contract BaseRegistrar is ERC721, Ownable {
     }
 
     /**
-     * @notice Register a name with records
-     * @param id The token id (labelhash)
-     * @param owner The owner address
-     * @param duration The registration duration
-     * @param resolver The resolver address
+     * @notice Register a name with resolver configuration
+     * @dev Only callable by authorized controllers. Uses setSubnodeRecord for atomic operation.
+     * @param id The token id (labelhash of the name)
+     * @param owner The address to own the name
+     * @param duration The registration duration in seconds
+     * @param resolver The resolver address to set (address(0) to skip)
      * @return The expiry timestamp
      */
     function registerWithConfig(
@@ -158,7 +181,9 @@ contract BaseRegistrar is ERC721, Ownable {
         uint256 duration,
         address resolver
     ) external onlyController returns (uint256) {
-        require(available(id), "Name not available");
+        if (!available(id)) {
+            revert SNS_NameNotAvailableById(id);
+        }
 
         expiries[id] = block.timestamp + duration;
 
@@ -192,15 +217,23 @@ contract BaseRegistrar is ERC721, Ownable {
     }
 
     /**
-     * @notice Renew a name
-     * @param id The token id (labelhash)
-     * @param duration Additional duration in seconds
+     * @notice Renew a name by extending its registration period
+     * @dev Only callable by authorized controllers. Name must not be expired.
+     * @param id The token id (labelhash of the name)
+     * @param duration Additional duration in seconds to add
      * @return The new expiry timestamp
      */
     function renew(
         uint256 id,
         uint256 duration
     ) external onlyController live(id) returns (uint256) {
+        // Check for overflow
+        unchecked {
+            if (expiries[id] + duration < expiries[id]) {
+                revert SNS_DurationOverflow(duration);
+            }
+        }
+        
         expiries[id] += duration;
 
         emit NameRenewed(id, expiries[id]);
@@ -210,13 +243,35 @@ contract BaseRegistrar is ERC721, Ownable {
 
     /**
      * @notice Reclaim ownership of a name in the registry
-     * @dev Used if registry ownership becomes out of sync with NFT ownership
-     * @param id The token id
-     * @param owner The owner to set
+     * @dev Used if registry ownership becomes out of sync with NFT ownership.
+     *      Only the NFT owner or approved operators can call this.
+     * @param id The token id (labelhash of the name)
+     * @param owner The owner address to set in the registry
      */
     function reclaim(uint256 id, address owner) external live(id) {
-        require(_isApprovedOrOwner(msg.sender, id), "Not approved");
+        if (!_isApprovedOrOwner(msg.sender, id)) {
+            revert SNS_NotApprovedOrOwner(msg.sender, id);
+        }
         ISNSRegistry(registry).setSubnodeOwner(baseNode, bytes32(id), owner);
+        emit NameReclaimed(id, owner);
+    }
+
+    /**
+     * @notice Execute multiple calls in a single transaction
+     * @dev Useful for batch renewals or reclaims
+     * @param data Array of encoded function calls
+     * @return results Array of return data from each call
+     */
+    function multicall(bytes[] calldata data) external returns (bytes[] memory results) {
+        results = new bytes[](data.length);
+        uint256 len = data.length;
+        for (uint256 i = 0; i < len; ) {
+            (bool success, bytes memory result) = address(this).delegatecall(data[i]);
+            require(success, "Multicall failed");
+            results[i] = result;
+            unchecked { ++i; }
+        }
+        return results;
     }
 
     /**

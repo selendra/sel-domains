@@ -4,6 +4,7 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import {SNSRegistry, ISNSRegistry} from "../src/SNSRegistry.sol";
 import {BaseRegistrar} from "../src/BaseRegistrar.sol";
+import "../src/interfaces/ISNSErrors.sol";
 
 contract BaseRegistrarTest is Test {
     SNSRegistry public registry;
@@ -110,7 +111,7 @@ contract BaseRegistrarTest is Test {
 
     function test_Register_RevertIfNotController() public {
         vm.prank(alice);
-        vm.expectRevert("Not a controller");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NotController.selector, alice));
         registrar.register(uint256(keccak256("alice")), alice, 365 days);
     }
 
@@ -120,7 +121,7 @@ contract BaseRegistrarTest is Test {
         vm.startPrank(controller);
         registrar.register(id, alice, 365 days);
 
-        vm.expectRevert("Name not available");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NameNotAvailableById.selector, id));
         registrar.register(id, bob, 365 days);
         vm.stopPrank();
     }
@@ -188,13 +189,13 @@ contract BaseRegistrarTest is Test {
         uint256 id = uint256(keccak256("alice"));
 
         vm.prank(controller);
-        registrar.register(id, alice, 365 days);
+        uint256 expires = registrar.register(id, alice, 365 days);
 
         // Fast forward past expiry + grace period
         vm.warp(block.timestamp + 365 days + 90 days + 1);
 
         vm.prank(controller);
-        vm.expectRevert("Name expired");
+        vm.expectRevert(abi.encodeWithSelector(SNS_NameExpired.selector, id, expires));
         registrar.renew(id, 365 days);
     }
 
